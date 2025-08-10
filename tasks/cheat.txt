@@ -1,0 +1,10 @@
+# Complete workflow commands
+/Generate PRD user-profile-editing
+
+
+/Generate Tasks from prd-user-profile-editing.md
+# User responds with "Go"
+
+
+/Execute Tasks tasks-prd-user-profile-editing.md
+# AI implements one sub-task, asks permission to continue

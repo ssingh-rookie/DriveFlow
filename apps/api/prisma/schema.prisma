@@ -45,13 +45,15 @@ model User {
   email       String     @unique
   fullName    String
   phone       String?
+  password    String?    // bcrypt hashed password
   externalId  String?    @unique // from Clerk/Auth0, etc.
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  orgs        UserOrg[]
-  instructors Instructor[]
-  auditLogs   AuditLog[]
+  orgs          UserOrg[]
+  instructors   Instructor[]
+  auditLogs     AuditLog[]
+  refreshTokens RefreshToken[]
 }
 
 model UserOrg {
@@ -470,4 +472,23 @@ model AuditLog {
 
   @@index([orgId, entityType, entityId])
   @@index([actorUserId])
+}
+
+// Authentication & Security
+model RefreshToken {
+  id          String   @id @default(uuid())
+  userId      String
+  jti         String   @unique // JWT ID for this refresh token
+  rotationId  String   // Groups tokens in the same rotation chain
+  tokenHash   String   // Hashed refresh token value
+  used        Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jti])
+  @@index([rotationId])
+  @@index([expiresAt])
 }

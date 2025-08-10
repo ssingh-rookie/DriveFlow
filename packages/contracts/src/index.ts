@@ -3,6 +3,23 @@ import { z } from 'zod';
 
 extendZodWithOpenApi(z);
 
+// ===== Export Auth Schemas =====
+export * from './auth';
+
+// Import auth schemas for OpenAPI registration
+import {
+  LoginDto,
+  AuthResponseDto,
+  RefreshTokenDto,
+  RefreshResponseDto,
+  UserProfileDto,
+  UpdateUserProfileDto,
+  ChangePasswordDto,
+  AuthErrorDto,
+  PermissionCheckDto,
+  PermissionResponseDto
+} from './auth';
+
 /** ===== Example schemas (replace with real ones) ===== */
 export const BookingCreate = z.object({
   studentId: z.string().uuid(),
@@ -27,6 +44,19 @@ export const ProblemDetails = z.object({
 /** ===== Registry: register schemas + endpoints ===== */
 const registry = new OpenAPIRegistry();
 
+// Register auth schemas
+registry.register('LoginDto', LoginDto);
+registry.register('AuthResponseDto', AuthResponseDto);
+registry.register('RefreshTokenDto', RefreshTokenDto);
+registry.register('RefreshResponseDto', RefreshResponseDto);
+registry.register('UserProfileDto', UserProfileDto);
+registry.register('UpdateUserProfileDto', UpdateUserProfileDto);
+registry.register('ChangePasswordDto', ChangePasswordDto);
+registry.register('AuthErrorDto', AuthErrorDto);
+registry.register('PermissionCheckDto', PermissionCheckDto);
+registry.register('PermissionResponseDto', PermissionResponseDto);
+
+// Register existing schemas
 registry.register('Booking', Booking);
 registry.register('ProblemDetails', ProblemDetails);
 
@@ -56,11 +86,97 @@ registry.registerPath({
   tags: ['Bookings']
 });
 
+// Register auth endpoints
+registry.registerPath({
+  method: 'post',
+  path: '/v1/auth/login',
+  request: {
+    body: {
+      content: { 'application/json': { schema: LoginDto } }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Login successful',
+      content: { 'application/json': { schema: AuthResponseDto } }
+    },
+    401: {
+      description: 'Invalid credentials',
+      content: { 'application/json': { schema: AuthErrorDto } }
+    }
+  },
+  tags: ['Authentication']
+});
+
+registry.registerPath({
+  method: 'post',
+  path: '/v1/auth/refresh',
+  request: {
+    body: {
+      content: { 'application/json': { schema: RefreshTokenDto } }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Token refreshed successfully',
+      content: { 'application/json': { schema: RefreshResponseDto } }
+    },
+    401: {
+      description: 'Invalid refresh token',
+      content: { 'application/json': { schema: AuthErrorDto } }
+    }
+  },
+  tags: ['Authentication']
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/users/me',
+  responses: {
+    200: {
+      description: 'User profile retrieved successfully',
+      content: { 'application/json': { schema: UserProfileDto } }
+    },
+    401: {
+      description: 'Unauthorized',
+      content: { 'application/json': { schema: AuthErrorDto } }
+    }
+  },
+  tags: ['User Profile']
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/v1/users/me',
+  request: {
+    body: {
+      content: { 'application/json': { schema: UpdateUserProfileDto } }
+    }
+  },
+  responses: {
+    200: {
+      description: 'Profile updated successfully',
+      content: { 'application/json': { schema: UserProfileDto } }
+    },
+    400: {
+      description: 'Invalid request',
+      content: { 'application/json': { schema: AuthErrorDto } }
+    },
+    401: {
+      description: 'Unauthorized',
+      content: { 'application/json': { schema: AuthErrorDto } }
+    }
+  },
+  tags: ['User Profile']
+});
+
 /** ===== Generate final OpenAPI document ===== */
 const generator = new OpenApiGeneratorV3(registry.definitions);
 export const openApiDoc = generator.generateDocument({
   openapi: '3.0.3',
-  info: { title: 'DriveFlow API', version: '1.0.0' },
-  paths: {},
-  components: {}
+  info: { 
+    title: 'DriveFlow API', 
+    version: '1.0.0',
+    description: 'CRM API for driving school management with JWT authentication and RBAC'
+  }
 });
