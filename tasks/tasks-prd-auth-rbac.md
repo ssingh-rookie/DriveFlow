@@ -73,8 +73,8 @@
   - [x] 3.6 Add JWT blacklist/revocation mechanism
 
 - [ ] 4.0 Role-Based Authorization System
-  - [ ] 4.1 Create JWT authentication guard using Passport strategy
-  - [ ] 4.2 Implement role-based authorization guard with permission matrix
+  - [x] 4.1 Create JWT authentication guard using Passport strategy
+  - [x] 4.2 Implement role-based authorization guard with permission matrix
   - [ ] 4.3 Create organization scoping guard for multi-tenancy
   - [ ] 4.4 Implement permission checking utilities (can user access resource)
   - [ ] 4.5 Create decorators for roles and current user extraction
