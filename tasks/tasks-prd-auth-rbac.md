@@ -64,13 +64,13 @@
   - [x] 2.5 Create refresh token repository with rotation management
   - [x] 2.6 Set up environment variables for JWT secrets
 
-- [ ] 3.0 JWT Implementation & Token Management
+- [x] 3.0 JWT Implementation & Token Management
   - [x] 3.1 Create JWT utility functions (generate, verify, decode)
   - [x] 3.2 Implement access token generation with proper claims (sub, role, orgId, exp)
   - [x] 3.3 Implement refresh token generation with rotation tracking
   - [x] 3.4 Create token validation middleware with error handling
   - [x] 3.5 Implement refresh token rotation logic (single-use, replay detection)
-  - [ ] 3.6 Add JWT blacklist/revocation mechanism
+  - [x] 3.6 Add JWT blacklist/revocation mechanism
 
 - [ ] 4.0 Role-Based Authorization System
   - [ ] 4.1 Create JWT authentication guard using Passport strategy
