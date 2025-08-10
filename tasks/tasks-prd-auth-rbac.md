@@ -56,13 +56,13 @@
   - [x] 1.5 Create permission and role validation schemas
   - [x] 1.6 Export auth schemas from contracts index and regenerate types
 
-- [ ] 2.0 Core Authentication Infrastructure
+- [x] 2.0 Core Authentication Infrastructure
   - [x] 2.1 Create auth module structure (module, controller, service, repo files)
   - [x] 2.2 Install required dependencies (bcrypt, jsonwebtoken, passport-jwt)
   - [x] 2.3 Implement password hashing utilities with bcrypt (cost factor 10)
   - [x] 2.4 Create user repository methods for authentication queries
-  - [ ] 2.5 Create refresh token repository with rotation management
-  - [ ] 2.6 Set up environment variables for JWT secrets
+  - [x] 2.5 Create refresh token repository with rotation management
+  - [x] 2.6 Set up environment variables for JWT secrets
 
 - [ ] 3.0 JWT Implementation & Token Management
   - [ ] 3.1 Create JWT utility functions (generate, verify, decode)
