@@ -22,19 +22,43 @@ import {
   UserProfileDto,
   UpdateUserProfileDto,
   ChangePasswordDto,
-  AuthErrorDto
+  AuthErrorDto,
+  RegisterDto,
 } from '@driveflow/contracts';
 
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtAuthGuard, Public } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
-import { JwtPayload } from './types/auth.types';
+import { AuthenticatedUser } from './strategies/jwt.strategy';
 
 @ApiTags('Authentication')
 @Controller('v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'User registration' })
+  @ApiResponse({
+    status: 201,
+    description: 'Registration successful',
+    type: () => AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid registration data',
+    type: () => AuthErrorDto,
+  })
+  async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
+    try {
+      return await this.authService.register(registerDto);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'User login' })
@@ -56,6 +80,7 @@ export class AuthController {
     }
   }
 
+  @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
@@ -92,10 +117,11 @@ export class AuthController {
     type: () => AuthErrorDto
   })
   async logout(
-    @Body() logoutDto: LogoutDto,
-    @CurrentUser() user: JwtPayload
+    @Request() request: any,
+    @CurrentUser() user: AuthenticatedUser
   ): Promise<void> {
-    await this.authService.logout(logoutDto.refreshToken, user.sub);
+    const refreshToken = this.extractRefreshTokenFromBody(request.body);
+    await this.authService.logout(refreshToken, user);
   }
 
   @Get('me')
@@ -112,8 +138,8 @@ export class AuthController {
     description: 'Unauthorized',
     type: () => AuthErrorDto
   })
-  async getProfile(@CurrentUser() user: JwtPayload): Promise<UserProfileDto> {
-    return await this.authService.getUserProfile(user.sub);
+  async getProfile(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileDto> {
+    return await this.authService.getUserProfile(user.id);
   }
 
   @Patch('me')
@@ -137,10 +163,10 @@ export class AuthController {
   })
   async updateProfile(
     @Body() updateDto: UpdateUserProfileDto,
-    @CurrentUser() user: JwtPayload
+    @CurrentUser() user: AuthenticatedUser
   ): Promise<UserProfileDto> {
     try {
-      return await this.authService.updateUserProfile(user.sub, updateDto);
+      return await this.authService.updateUserProfile(user.id, updateDto);
     } catch (error) {
       throw new BadRequestException('Invalid profile data');
     }
@@ -166,11 +192,11 @@ export class AuthController {
   })
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
-    @CurrentUser() user: JwtPayload
+    @CurrentUser() user: AuthenticatedUser
   ): Promise<{ message: string }> {
     try {
       await this.authService.changePassword(
-        user.sub,
+        user.id,
         changePasswordDto.currentPassword,
         changePasswordDto.newPassword
       );
@@ -178,5 +204,13 @@ export class AuthController {
     } catch (error) {
       throw new BadRequestException('Invalid password data');
     }
+  }
+
+  private extractRefreshTokenFromBody(body: any): string {
+    const refreshToken = body.refreshToken;
+    if (!refreshToken) {
+      throw new BadRequestException('Refresh token is required');
+    }
+    return refreshToken;
   }
 }

@@ -6,12 +6,19 @@ extendZodWithOpenApi(z);
 // ===== Authentication Request Schemas =====
 
 export const LoginDto = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(1, 'Password is required')
+  email: z.string().email(),
+  password: z.string(),
 }).openapi('LoginDto');
 
+export const RegisterDto = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  fullName: z.string(),
+  orgName: z.string(),
+}).openapi('RegisterDto');
+
 export const RefreshTokenDto = z.object({
-  refreshToken: z.string().min(1, 'Refresh token is required')
+  refreshToken: z.string(),
 }).openapi('RefreshTokenDto');
 
 export const LogoutDto = z.object({
@@ -102,3 +109,4 @@ export type UpdateUserProfileDto = z.infer<typeof UpdateUserProfileDto>;
 export type ChangePasswordDto = z.infer<typeof ChangePasswordDto>;
 export type JwtPayloadDto = z.infer<typeof JwtPayloadDto>;
 export type AuthErrorDto = z.infer<typeof AuthErrorDto>;
+export type RegisterDto = z.infer<typeof RegisterDto>;

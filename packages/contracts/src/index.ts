@@ -15,10 +15,12 @@ import {
   UserProfileDto,
   UpdateUserProfileDto,
   ChangePasswordDto,
+  JwtPayloadDto,
   AuthErrorDto,
+  RegisterDto,
   PermissionCheckDto,
   PermissionResponseDto
-} from './auth';
+} from './auth/auth.schemas';
 
 /** ===== Example schemas (replace with real ones) ===== */
 export const BookingCreate = z.object({
@@ -46,6 +48,7 @@ const registry = new OpenAPIRegistry();
 
 // Register auth schemas
 registry.register('LoginDto', LoginDto);
+registry.register('RegisterDto', RegisterDto);
 registry.register('AuthResponseDto', AuthResponseDto);
 registry.register('RefreshTokenDto', RefreshTokenDto);
 registry.register('RefreshResponseDto', RefreshResponseDto);
@@ -87,6 +90,40 @@ registry.registerPath({
 });
 
 // Register auth endpoints
+registry.registerPath({
+  method: 'post',
+  path: '/v1/auth/register',
+  summary: 'Register a new user',
+  tags: ['Authentication'],
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: RegisterDto,
+        },
+      },
+    },
+  },
+  responses: {
+    '201': {
+      description: 'User registered successfully',
+      content: {
+        'application/json': {
+          schema: AuthResponseDto,
+        },
+      },
+    },
+    '400': {
+      description: 'Invalid input',
+      content: {
+        'application/json': {
+          schema: AuthErrorDto,
+        },
+      },
+    },
+  },
+});
+
 registry.registerPath({
   method: 'post',
   path: '/v1/auth/login',

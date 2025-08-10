@@ -8,127 +8,137 @@ import {
   RefreshResponseDto,
   UserProfileDto,
   UpdateUserProfileDto,
-  JwtPayloadDto
+  RegisterDto,
 } from '@driveflow/contracts';
 
 import { AuthRepository } from './auth.repo';
 import { PasswordUtil } from './utils/password.util';
 import { JwtUtil } from './utils/jwt.util';
+import { RefreshTokenRotationUtil } from './utils/refresh-token-rotation.util';
+import { JwtBlacklistUtil, RevocationReason } from './utils/jwt-blacklist.util';
+import { AuthenticatedUser } from './strategies/jwt.strategy';
 import { JwtPayload } from './types/auth.types';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly authRepo: AuthRepository,
-    private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
-    private readonly passwordUtil: PasswordUtil,
-    private readonly jwtUtil: JwtUtil
+    private readonly jwtUtil: JwtUtil,
+    private readonly refreshTokenRotationUtil: RefreshTokenRotationUtil,
+    private readonly blacklistUtil: JwtBlacklistUtil,
   ) {}
 
+  async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
+    const { email, password, fullName, orgName } = registerDto;
+
+    const existingUser = await this.authRepo.findUserByEmail(email);
+    if (existingUser) {
+      throw new BadRequestException('User with this email already exists');
+    }
+
+    const hashedPassword = await PasswordUtil.hashPassword(password);
+    
+    // In a real app, this would be a transactional operation
+    const newUser = await this.authRepo.createUser({
+      email,
+      password: hashedPassword,
+      fullName,
+    });
+
+    const newOrg = await this.authRepo.createOrganization({ name: orgName });
+    await this.authRepo.addUserToOrg(newUser.id, newOrg.id, 'owner');
+
+    return this.login({ email, password });
+  }
+
   async login(loginDto: LoginDto): Promise<AuthResponseDto> {
-    // Find user by email
-    const user = await this.authRepo.findUserByEmail(loginDto.email);
+    const { email, password } = loginDto;
+
+    const user = await this.authRepo.findUserByEmailWithPassword(email);
     if (!user || !user.password) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Verify password
-    const isPasswordValid = await PasswordUtil.verifyPassword(
-      loginDto.password,
-      user.password
-    );
+    const isPasswordValid = await PasswordUtil.verifyPassword(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Get user's primary organization role
     const userOrg = await this.authRepo.getUserPrimaryOrg(user.id);
     if (!userOrg) {
       throw new UnauthorizedException('User has no organization access');
     }
 
-    // Generate tokens
-    const jwtPayload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
+    const rotationId = this.jwtUtil.generateRotationId();
+
+    const accessToken = this.jwtUtil.generateAccessToken({
+      userId: user.id,
       role: userOrg.role,
       orgId: userOrg.orgId,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (15 * 60), // 15 minutes
-      jti: this.jwtUtil.generateJti()
-    };
+    });
 
-    const accessToken = this.jwtService.sign(jwtPayload);
-    const refreshToken = await this.jwtUtil.generateRefreshToken(user.id);
+    const refreshToken = this.jwtUtil.generateRefreshToken({
+      userId: user.id,
+      role: userOrg.role,
+      orgId: userOrg.orgId,
+      rotationId,
+    });
 
-    // Log successful login
+    const refreshTokenExpiresAt = new Date();
+    refreshTokenExpiresAt.setDate(refreshTokenExpiresAt.getDate() + 7);
+
+    await this.authRepo.createRefreshToken({
+      userId: user.id,
+      jti: this.jwtUtil.extractJti(refreshToken)!,
+      rotationId,
+      tokenHash: this.jwtUtil.hashToken(refreshToken),
+      expiresAt: refreshTokenExpiresAt,
+    });
+
     await this.authRepo.logAuthEvent({
       userId: user.id,
       event: 'login_success',
-      metadata: { orgId: userOrg.orgId, role: userOrg.role }
+      metadata: { orgId: userOrg.orgId, role: userOrg.role },
     });
 
     return {
       accessToken,
-      refreshToken: refreshToken.token,
-      expiresIn: 15 * 60, // 15 minutes in seconds
+      refreshToken,
+      expiresIn: 3600,
       tokenType: 'Bearer',
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: userOrg.role,
-        orgId: userOrg.orgId
-      }
+        orgId: userOrg.orgId,
+      },
     };
   }
 
   async refreshToken(refreshToken: string): Promise<RefreshResponseDto> {
-    // Validate and rotate refresh token
-    const tokenData = await this.jwtUtil.validateAndRotateRefreshToken(refreshToken);
-    
-    // Get user and org data
-    const user = await this.authRepo.findUserById(tokenData.userId);
-    if (!user) {
-      throw new UnauthorizedException('Invalid user');
-    }
-
-    const userOrg = await this.authRepo.getUserPrimaryOrg(user.id);
-    if (!userOrg) {
-      throw new UnauthorizedException('User has no organization access');
-    }
-
-    // Generate new access token
-    const jwtPayload: JwtPayload = {
-      sub: user.id,
-      email: user.email,
-      role: userOrg.role,
-      orgId: userOrg.orgId,
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (15 * 60), // 15 minutes
-      jti: this.jwtUtil.generateJti()
-    };
-
-    const accessToken = this.jwtService.sign(jwtPayload);
-
+    const result = await this.refreshTokenRotationUtil.rotateRefreshToken(refreshToken);
     return {
-      accessToken,
-      refreshToken: tokenData.newRefreshToken,
-      expiresIn: 15 * 60, // 15 minutes in seconds
-      tokenType: 'Bearer'
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: 3600,
+      tokenType: 'Bearer',
     };
   }
 
-  async logout(refreshToken: string, userId: string): Promise<void> {
-    // Revoke refresh token
-    await this.jwtUtil.revokeRefreshToken(refreshToken);
-
-    // Log logout event
+  async logout(refreshToken: string, user: AuthenticatedUser): Promise<void> {
+    const tokenInfo = this.jwtUtil.decodeToken(refreshToken);
+    if (tokenInfo && tokenInfo.jti) {
+      await this.blacklistUtil.revokeRefreshToken(
+        tokenInfo.jti,
+        RevocationReason.USER_LOGOUT,
+        { userId: user.id }
+      );
+    }
     await this.authRepo.logAuthEvent({
-      userId,
+      userId: user.id,
       event: 'logout',
-      metadata: {}
+      metadata: {},
     });
   }
 
@@ -213,10 +223,8 @@ export class AuthService {
     // Update password
     await this.authRepo.updateUser(userId, { password: hashedNewPassword });
 
-    // Revoke all refresh tokens to force re-login
-    await this.jwtUtil.revokeAllUserRefreshTokens(userId);
+    await this.blacklistUtil.revokeAllUserTokens(userId, RevocationReason.PASSWORD_CHANGE);
 
-    // Log password change
     await this.authRepo.logAuthEvent({
       userId,
       event: 'password_changed',

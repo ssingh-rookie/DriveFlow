@@ -81,8 +81,8 @@
   - [x] 4.6 Add scoped permission logic (instructor assigned students, parent-child relationship)
 
 - [ ] 5.0 API Integration & Security Middleware
-  - [ ] 5.1 Implement auth controller endpoints (POST /auth/login, /auth/refresh, /auth/logout)
-  - [ ] 5.2 Add authentication service methods (login, refresh, logout, validate)
+  - [x] 5.1 Implement auth controller endpoints (POST /auth/login, /auth/refresh, /auth/logout)
+  - [x] 5.2 Add authentication service methods (login, refresh, logout, validate)
   - [ ] 5.3 Integrate guards with existing app module and setup global guards
   - [ ] 5.4 Add audit logging for authentication events (login, logout, failures)
   - [ ] 5.5 Implement comprehensive error handling and security responses

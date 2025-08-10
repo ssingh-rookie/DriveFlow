@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../core/prisma/prisma.service';
-import { User, UserOrg, RefreshToken, OrgRole, Prisma } from '@prisma/client';
+import { User, UserOrg, RefreshToken, OrgRole, Prisma, Org } from '@prisma/client';
 
 export interface AuthEvent {
   userId: string;
@@ -145,19 +145,35 @@ export class AuthRepository {
         org: {
           select: {
             id: true,
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+      },
     });
   }
 
   async isUserMemberOfOrg(userId: string, orgId: string): Promise<boolean> {
     const userOrg = await this.prisma.userOrg.findFirst({
       where: { userId, orgId },
-      select: { id: true }, // Select minimal data for existence check
+      select: { id: true },
     });
     return !!userOrg;
+  }
+
+  async createOrganization(data: { name: string }): Promise<Org> {
+    return this.prisma.org.create({
+      data,
+    });
+  }
+
+  async addUserToOrg(userId: string, orgId: string, role: OrgRole): Promise<UserOrg> {
+    return this.prisma.userOrg.create({
+      data: {
+        userId,
+        orgId,
+        role,
+      },
+    });
   }
 
   // ===== Refresh Token Operations =====
