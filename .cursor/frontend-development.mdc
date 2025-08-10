@@ -1,0 +1,158 @@
+---
+globs: apps/web/**/*,apps/mobile/**/*,packages/ui/**/*
+description: "Frontend development patterns for web and mobile apps"
+---
+
+# DriveFlow Frontend Development Rules
+
+## Architecture Principles
+- **Server-State First**: Use TanStack Query for server data
+- **Minimal Local State**: Only UI state in React state
+- **Type Safety**: Generated types from `@driveflow/contracts`
+- **Shared Components**: Reuse from `@driveflow/ui` package
+
+## Web App (Next.js)
+Located: [apps/web/](mdc:apps/web/)
+
+### Project Structure
+```
+apps/web/
+├── src/
+│   ├── app/              # App Router (Next.js 14+)
+│   ├── components/       # Page-specific components
+│   ├── hooks/           # Custom React hooks
+│   ├── lib/             # Utilities and configurations
+│   └── styles/          # Global styles
+├── public/              # Static assets
+└── package.json         # Dependencies
+```
+
+### Routing
+- Use Next.js 14+ App Router
+- Organize by feature: `/dashboard/bookings`, `/dashboard/students`
+- Protected routes with middleware for authentication
+- Role-based route guards using `@driveflow/contracts` types
+
+### Data Fetching
+- **TanStack Query** for all server state
+- Use generated client from `@driveflow/clients`
+- Implement optimistic updates for better UX
+- Cache invalidation strategies per feature
+
+Example:
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@driveflow/clients';
+
+export function useBookings(orgId: string) {
+  return useQuery({
+    queryKey: ['bookings', orgId],
+    queryFn: () => api.bookings.list({ orgId }),
+    staleTime: 30000,
+  });
+}
+```
+
+## Mobile App (React Native)
+Located: [apps/mobile/](mdc:apps/mobile/)
+
+### Project Structure
+```
+apps/mobile/
+├── src/
+│   ├── screens/         # Screen components
+│   ├── navigation/      # Navigation configuration
+│   ├── components/      # Mobile-specific components
+│   ├── hooks/          # Custom hooks
+│   └── services/       # Platform services (GPS, push notifications)
+├── ios/                # iOS native code
+├── android/            # Android native code
+└── package.json        # Dependencies
+```
+
+### Navigation
+- React Navigation for screen management
+- Tab-based navigation for main features
+- Stack navigation for detailed flows
+- Deep linking for notifications and sharing
+
+### Platform Features
+- **Location Services**: Background GPS tracking during lessons
+- **Push Notifications**: Booking updates and reminders
+- **Camera**: Document uploads and profile photos
+- **Offline Support**: Critical features work offline
+
+## Shared UI Package
+Located: [packages/ui/](mdc:packages/ui/)
+
+### Component Guidelines
+- Built on **shadcn/ui** components
+- **Headless UI** for complex interactions
+- **Tailwind CSS** for styling
+- **Storybook** for component documentation
+
+### Component Structure
+```
+packages/ui/src/
+├── components/
+│   ├── button.tsx       # Base button component
+│   ├── form.tsx         # Form components
+│   ├── table.tsx        # Data table
+│   └── calendar.tsx     # Date picker
+├── hooks/              # Shared hooks
+└── utils/              # Utility functions
+```
+
+## Form Handling
+- **react-hook-form** for form state management
+- **zodResolver** for validation integration
+- Import validation schemas from `@driveflow/contracts`
+- Consistent error messaging and UX patterns
+
+Example:
+```typescript
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CreateBookingSchema } from '@driveflow/contracts';
+
+export function BookingForm() {
+  const form = useForm({
+    resolver: zodResolver(CreateBookingSchema),
+    defaultValues: { /* ... */ }
+  });
+  
+  // Form implementation
+}
+```
+
+## State Management
+- **TanStack Query** for server state
+- **React Context** for theme, auth state
+- **Zustand** for complex client state (if needed)
+- **React Hook Form** for form state
+
+## Real-time Features
+- **Socket.IO Client** for live updates
+- Subscribe to organization-scoped events
+- Update TanStack Query cache on real-time events
+- Handle connection state and reconnection
+
+## Styling Guidelines
+- **Tailwind CSS** utility classes
+- **CSS-in-JS** for dynamic styles only
+- **Design tokens** from `@driveflow/ui`
+- **Dark mode** support throughout
+- **Responsive design** mobile-first approach
+
+## Performance Optimization
+- **Code splitting** by route and feature
+- **Image optimization** with Next.js Image component
+- **Bundle analysis** to monitor size
+- **Lazy loading** for heavy components
+- **Virtualization** for large lists
+
+## Testing Strategy
+- **Jest + React Testing Library** for unit tests
+- **Storybook** for component testing
+- **Playwright** for E2E testing
+- **Mock Service Worker** for API mocking

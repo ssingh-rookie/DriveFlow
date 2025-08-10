@@ -1,0 +1,64 @@
+---
+globs: apps/api/prisma/*,apps/api/src/**/*.ts,docs/database/*
+description: "Database and Prisma-specific rules for DriveFlow"
+---
+
+# DriveFlow Database Rules
+
+## Database Architecture
+- **Multi-tenant PostgreSQL** with organization-scoped data (`orgId`)
+- **Prisma ORM** as single source of truth for schema
+- **Migration-first** approach - never modify DB directly
+- All tables include audit fields: `id`, `createdAt`, `updatedAt`
+
+## Schema Management
+- Main schema: [apps/api/prisma/schema.prisma](mdc:apps/api/prisma/schema.prisma)
+- Migration guide: [docs/database/migration-guide.md](mdc:docs/database/migration-guide.md)
+- Always run `pnpm prisma generate` after schema changes
+- Use descriptive migration names: `pnpm prisma migrate dev --name add_user_preferences`
+
+## Database Access Patterns
+1. **Repository Pattern**: All DB access through `*.repo.ts` files
+2. **Never import Prisma directly** in controllers or services
+3. **Multi-tenancy**: Always filter by `orgId` unless explicitly cross-tenant
+4. **Soft deletes**: Use status fields instead of DELETE when data retention needed
+
+## Key Database Locations
+- **Schema**: `apps/api/prisma/schema.prisma`
+- **Migrations**: `apps/api/prisma/migrations/`
+- **Seed data**: `apps/api/prisma/seed.ts`
+- **Connection**: `DATABASE_URL` in `apps/api/.env`
+- **Documentation**: `docs/database/` directory
+
+## Migration Safety Rules
+- **Breaking changes require 3-step migration**:
+  1. Add new field/table (optional)
+  2. Backfill data and update application
+  3. Remove old field/table
+- Always backup production before destructive changes
+- Test migrations on staging environment first
+- Include rollback plan in PR description
+
+## Data Validation
+- **Input validation**: Use Zod schemas from `@driveflow/contracts`
+- **Database constraints**: Enforce at DB level (NOT NULL, UNIQUE, CHECK)
+- **Enums**: Define in Prisma schema, generate TypeScript types
+- **Foreign keys**: Always include proper cascade rules
+
+## Performance Guidelines
+- **Indexes**: Add for all foreign keys and frequently queried fields
+- **Batch operations**: Use `prisma.transaction()` for multiple related operations
+- **Pagination**: Cursor-based (`cursor` + `limit`) for large datasets
+- **N+1 queries**: Use `include` and `select` strategically
+
+## Audit and Compliance
+- **Audit logs**: All business-critical changes logged to `AuditLog` table
+- **PII handling**: Never log sensitive data, use data classification
+- **Data retention**: Follow organization-specific retention policies
+- **GDPR compliance**: Support data export and deletion requests
+
+## Local Development
+- **Database**: `driveflow_dev` on localhost:5432
+- **User**: `driveflow` with password from `.env`
+- **Studio**: `pnpm prisma studio` for data browsing
+- **Reset**: `pnpm prisma migrate reset` (⚠️ destructive)

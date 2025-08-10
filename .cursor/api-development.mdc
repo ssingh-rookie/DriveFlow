@@ -1,0 +1,129 @@
+---
+globs: apps/api/**/*.ts,packages/contracts/**/*.ts
+description: "API development patterns and conventions"
+---
+
+# DriveFlow API Development Rules
+
+## Architecture Pattern
+- **NestJS Framework** with dependency injection
+- **Repository Pattern** for database access
+- **Service Layer** for business logic (pure functions)
+- **Controller Layer** for HTTP handling (thin, delegates only)
+- **Guard Layer** for authentication and authorization
+
+## File Structure
+```
+apps/api/src/
+├── main.ts                 # Application bootstrap
+├── app.module.ts          # Root module
+├── core/                  # Core infrastructure
+│   ├── prisma/           # Database module
+│   ├── auth/             # Authentication
+│   └── common/           # Shared utilities
+└── modules/              # Feature modules
+    ├── bookings/         # Booking management
+    ├── users/            # User management
+    └── payments/         # Payment processing
+```
+
+## Module Structure
+Each feature module follows this pattern:
+```
+bookings/
+├── bookings.module.ts     # NestJS module definition
+├── bookings.controller.ts # HTTP endpoints
+├── bookings.service.ts    # Business logic
+├── bookings.repo.ts       # Database access
+├── dto/                   # Data transfer objects
+└── guards/               # Authorization guards
+```
+
+## Controller Guidelines
+- Use `@Controller('v1/bookings')` for versioned routes
+- Keep controllers thin - validate, authorize, delegate
+- Import DTOs from `@driveflow/contracts` only
+- Use proper HTTP status codes
+- Handle errors with ProblemDetails format
+
+Example:
+```typescript
+@Controller('v1/bookings')
+@UseGuards(JwtAuthGuard, RoleGuard)
+export class BookingsController {
+  constructor(private bookingsService: BookingsService) {}
+
+  @Post()
+  @Roles('instructor', 'admin')
+  async create(@Body() dto: CreateBookingDto) {
+    return this.bookingsService.create(dto);
+  }
+}
+```
+
+## Service Guidelines
+- Pure business logic, no I/O operations
+- Use dependency injection for repositories
+- Return domain objects, not Prisma models
+- Handle business validation and rules
+- Throw typed exceptions with ProblemDetails
+
+## Repository Guidelines
+- Only place that imports and uses Prisma
+- One repository per aggregate root
+- Always include `orgId` filtering for multi-tenancy
+- Use transactions for multi-step operations
+- Map Prisma models to domain objects
+
+Example:
+```typescript
+@Injectable()
+export class BookingsRepo {
+  constructor(private prisma: PrismaService) {}
+
+  async findByOrg(orgId: string): Promise<Booking[]> {
+    const bookings = await this.prisma.booking.findMany({
+      where: { orgId },
+      include: { student: true, instructor: true }
+    });
+    return bookings.map(this.toDomain);
+  }
+}
+```
+
+## Authentication & Authorization
+- Use JWT tokens with role-based access control
+- Roles: `owner`, `admin`, `instructor`, `student`
+- Implement guards for route protection
+- Always validate user belongs to requested organization
+
+## Database Access Rules
+- **Never import Prisma directly** in controllers or services
+- Use repositories as the only database access layer
+- Always filter by `orgId` for multi-tenancy
+- Use `include` and `select` to optimize queries
+- Wrap multi-step operations in transactions
+
+## Error Handling
+- Use ProblemDetails format (RFC 7807)
+- Map infrastructure errors to appropriate HTTP status
+- Never expose internal implementation details
+- Log errors with structured logging (no PII)
+
+## Validation
+- All input validated with Zod schemas from `@driveflow/contracts`
+- Use `ValidationPipe` with `transform: true`
+- Validate at controller level before service calls
+- Return validation errors in ProblemDetails format
+
+## Testing
+- Unit tests for services (business logic)
+- Integration tests for repositories (database)
+- E2E tests for critical user journeys
+- Use test factories from `@driveflow/testing`
+
+## Background Jobs
+- Use BullMQ for async processing
+- Queue jobs in controllers, process in workers
+- Keep I/O operations (Stripe, emails) in job handlers
+- Implement proper retry and error handling

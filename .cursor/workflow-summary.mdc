@@ -1,0 +1,92 @@
+---
+alwaysApply: true
+---
+
+# DriveFlow Complete Development Workflow
+
+## 🚀 End-to-End Process
+
+### **Phase 1: Requirements → PRD**
+1. **Feature Request**: User describes new feature need
+2. **Clarifying Questions**: AI asks DriveFlow-specific context questions
+3. **Generate PRD**: Create structured requirements document
+4. **Save**: Store as `/tasks/prd-[feature-name].md`
+
+### **Phase 2: PRD → Task List**
+1. **Analyze PRD**: Understand requirements and acceptance criteria
+2. **Assess Codebase**: Review existing [DriveFlow architecture](mdc:apps/api/src/) and [database schema](mdc:apps/api/prisma/schema.prisma)
+3. **Generate Parent Tasks**: Create 5-7 high-level implementation tasks
+4. **User Confirmation**: Wait for "Go" before detailed breakdown
+5. **Generate Sub-Tasks**: Break down into actionable development steps
+6. **Save**: Store as `/tasks/tasks-[prd-name].md`
+
+### **Phase 3: Task List → Implementation**
+1. **Execute Sub-Tasks**: One at a time with user permission
+2. **Follow Protocol**: Implement → Test → Mark Complete → Request Permission
+3. **Complete Parent Tasks**: Full test suite → Clean up → Commit
+4. **Maintain Progress**: Update task list and relevant files
+5. **Quality Gates**: Ensure DriveFlow standards throughout
+
+## 📋 Command Reference
+
+| Command | Purpose | Output |
+|---------|---------|---------|
+| `/Generate PRD [feature]` | Create requirements document | `prd-[feature].md` |
+| `/Generate Tasks from [prd-file]` | Create implementation tasks | `tasks-[prd].md` |
+| `/Execute Tasks [task-file]` | Begin systematic implementation | Code + tests + commits |
+
+## 🏗️ DriveFlow Integration
+
+### **Always Consider**
+- **Multi-tenancy**: All data scoped by `orgId`
+- **RBAC**: Role-based access (owner/admin/instructor/student)
+- **Type Safety**: Use `@driveflow/contracts` for all types
+- **Architecture**: Follow NestJS + Prisma + Repository patterns
+- **Testing**: Unit, integration, and E2E coverage
+- **Documentation**: Update relevant docs in [docs/](mdc:docs/)
+
+### **Key Files to Reference**
+- **Database Schema**: [apps/api/prisma/schema.prisma](mdc:apps/api/prisma/schema.prisma)
+- **API Structure**: [apps/api/src/](mdc:apps/api/src/)
+- **Shared Contracts**: [packages/contracts/](mdc:packages/contracts/)
+- **UI Components**: [packages/ui/](mdc:packages/ui/)
+- **Documentation**: [docs/database/](mdc:docs/database/)
+
+## 🎯 Quality Standards
+
+### **Code Quality**
+- Follow existing patterns in codebase
+- Maintain type safety throughout
+- Include comprehensive error handling
+- Implement proper validation with Zod
+
+### **Testing Requirements**
+- Unit tests for business logic
+- Integration tests for API endpoints
+- Component tests for UI elements
+- E2E tests for critical user journeys
+
+### **Git Workflow**
+- Conventional commit messages
+- One parent task per commit
+- Clean, tested code only
+- Descriptive commit descriptions
+
+## 🔄 Iteration and Feedback
+
+### **Task Execution Flow**
+```
+Sub-task → Implementation → Testing → Mark Complete → Request Permission
+    ↓
+All Sub-tasks Complete → Full Test Suite → Clean Up → Commit → Mark Parent Complete
+    ↓
+Next Parent Task → Repeat Process
+```
+
+### **Communication Protocol**
+- Clear status updates after each sub-task
+- Request explicit permission before proceeding
+- Provide summary of changes and next steps
+- Highlight any blockers or questions
+
+This workflow ensures systematic, high-quality feature development aligned with DriveFlow's architecture and standards.

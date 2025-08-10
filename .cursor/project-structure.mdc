@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+---
+
+# DriveFlow Project Structure Guide
+
+## Repository Layout
+This is a **monorepo** with the following structure:
+
+### Applications
+- **[apps/api/](mdc:apps/api/)** - NestJS backend API with Prisma ORM
+- **[apps/web/](mdc:apps/web/)** - Next.js web application  
+- **[apps/mobile/](mdc:apps/mobile/)** - React Native mobile app
+- **[apps/worker/](mdc:apps/worker/)** - Background job processing (BullMQ)
+
+### Shared Packages
+- **[packages/contracts/](mdc:packages/contracts/)** - Zod schemas and OpenAPI generation
+- **[packages/clients/](mdc:packages/clients/)** - Generated API clients
+- **[packages/ui/](mdc:packages/ui/)** - Shared UI components (shadcn/ui)
+- **[packages/testing/](mdc:packages/testing/)** - Test utilities and factories
+
+### Documentation
+- **[docs/database/](mdc:docs/database/)** - Complete database documentation
+- **[docs/README.md](mdc:docs/README.md)** - Documentation index
+
+### Configuration
+- **[package.json](mdc:package.json)** - Root package.json with workspace config
+- **[pnpm-workspace.yaml](mdc:pnpm-workspace.yaml)** - pnpm workspace configuration
+- **[turbo.json](mdc:turbo.json)** - Turborepo build configuration
+- **[tsconfig.json](mdc:tsconfig.json)** - Shared TypeScript configuration
+
+## Database Layer
+- **Schema**: [apps/api/prisma/schema.prisma](mdc:apps/api/prisma/schema.prisma)
+- **Migrations**: [apps/api/prisma/migrations/](mdc:apps/api/prisma/migrations/)
+- **Environment**: [apps/api/.env](mdc:apps/api/.env) (local only, not in git)
+
+## Key Principles
+1. **Contract-First**: All types flow from [packages/contracts/](mdc:packages/contracts/)
+2. **Multi-Tenant**: All data scoped by `orgId` 
+3. **Type Safety**: TypeScript throughout, generated from Prisma + Zod
+4. **Monorepo Benefits**: Shared code, coordinated releases, unified tooling
+
+## Development Workflow
+1. Define schemas in [packages/contracts/](mdc:packages/contracts/)
+2. Generate types: `pnpm gen`
+3. Implement in [apps/api/](mdc:apps/api/) using generated types
+4. Consume in [apps/web/](mdc:apps/web/) and [apps/mobile/](mdc:apps/mobile/)
+5. Test with utilities from [packages/testing/](mdc:packages/testing/)
+
+## Entry Points
+- **API Server**: [apps/api/src/main.ts](mdc:apps/api/src/main.ts)
+- **Web App**: [apps/web/](mdc:apps/web/) (Next.js)
+- **Mobile App**: [apps/mobile/](mdc:apps/mobile/) (React Native)
+- **Worker**: [apps/worker/](mdc:apps/worker/) (BullMQ processors)

@@ -1,0 +1,199 @@
+---
+description: "Rules for systematic execution of task lists with proper Git workflow"
+alwaysApply: true
+---
+
+# DriveFlow Task Execution Rules
+
+## Core Execution Protocol
+
+### **One Sub-Task at a Time**
+- **NEVER** start the next sub-task without explicit user permission
+- Complete current sub-task fully before requesting to proceed
+- Always ask: "Sub-task X.Y completed. Ready to proceed to X.Z? (y/n)"
+
+### **Sub-Task Completion Protocol**
+1. **Implement**: Complete the sub-task functionality
+2. **Test**: Verify the implementation works correctly
+3. **Mark Complete**: Change `[ ]` to `[x]` in task list file
+4. **Update Files**: Maintain "Relevant Files" section
+5. **Request Permission**: Ask user for approval to continue
+
+### **Parent Task Completion Protocol**
+When ALL sub-tasks under a parent task are marked `[x]`:
+
+1. **Run Full Test Suite**:
+   ```bash
+   # API tests
+   cd apps/api && pnpm test
+   
+   # Web app tests  
+   cd apps/web && pnpm test
+   
+   # Mobile tests (if applicable)
+   cd apps/mobile && pnpm test
+   
+   # Package tests
+   cd packages/ui && pnpm test
+   cd packages/contracts && pnpm test
+   ```
+
+2. **Only if ALL tests pass**:
+   - Clean up temporary files and code
+   - Stage changes: `git add .`
+   - Commit with structured message (see format below)
+   - Mark parent task as `[x]`
+
+3. **If tests fail**:
+   - Fix issues before proceeding
+   - Do NOT commit until all tests pass
+
+## DriveFlow-Specific Testing
+
+### **API Testing**
+- Unit tests for services and repositories
+- Integration tests for controllers
+- Database tests with proper cleanup
+- Authentication and authorization tests
+
+### **Frontend Testing**
+- Component unit tests with React Testing Library
+- Hook tests for custom hooks
+- Integration tests for user flows
+- Accessibility tests
+
+### **Database Testing**
+- Migration tests (up and down)
+- Seed data validation
+- Multi-tenancy isolation tests
+- Performance tests for queries
+
+## Git Commit Format
+
+Use conventional commit format with multiple `-m` flags:
+
+```bash
+git commit -m "feat: implement user profile editing" \
+           -m "- Add ProfileForm component with validation" \
+           -m "- Create user profile API endpoints" \
+           -m "- Include proper RBAC and orgId scoping" \
+           -m "- Add comprehensive test coverage" \
+           -m "Completes parent task 2.0 from prd-user-profile"
+```
+
+### **Commit Types for DriveFlow**
+- `feat:` - New features or capabilities
+- `fix:` - Bug fixes
+- `refactor:` - Code restructuring without behavior change
+- `test:` - Adding or updating tests
+- `docs:` - Documentation updates
+- `chore:` - Maintenance tasks (deps, config)
+- `perf:` - Performance improvements
+- `security:` - Security-related changes
+
+## Task List Maintenance
+
+### **Required Updates After Each Sub-Task**
+1. **Mark Completion**: Update `[ ]` to `[x]` for completed sub-task
+2. **Update Relevant Files**: Add/modify file entries with descriptions
+3. **Add New Tasks**: If implementation reveals additional work needed
+4. **Update Progress**: Keep task list current and accurate
+
+### **Relevant Files Section Format**
+```markdown
+## Relevant Files
+
+### New Files Created
+- `apps/api/src/modules/profile/profile.controller.ts` - HTTP endpoints for profile management
+- `apps/api/src/modules/profile/profile.service.ts` - Business logic for profile operations
+- `apps/web/src/components/ProfileForm.tsx` - User profile editing form component
+- `packages/contracts/src/profile/index.ts` - Zod schemas for profile validation
+
+### Existing Files Modified
+- `apps/api/src/app.module.ts` - Added ProfileModule import
+- `apps/api/prisma/schema.prisma` - Extended User model with profile fields
+- `apps/web/src/app/dashboard/layout.tsx` - Added profile navigation link
+
+### Test Files
+- `apps/api/src/modules/profile/profile.service.spec.ts` - Unit tests for profile service
+- `apps/web/src/components/ProfileForm.test.tsx` - Component tests for profile form
+```
+
+## Error Handling and Recovery
+
+### **When Tests Fail**
+1. **Identify Root Cause**: Review test output and logs
+2. **Fix Issues**: Address failing tests one by one
+3. **Re-run Tests**: Ensure all tests pass before proceeding
+4. **Update Task List**: Mark any additional work discovered
+
+### **When Implementation Blocks**
+1. **Document Issue**: Add note to task list about blocker
+2. **Ask for Guidance**: Request user input on approach
+3. **Create Sub-Task**: Break down complex issues into smaller steps
+4. **Research Solutions**: Consider existing DriveFlow patterns
+
+## Quality Gates
+
+### **Before Marking Sub-Task Complete**
+- [ ] Functionality works as specified
+- [ ] Code follows DriveFlow conventions
+- [ ] Proper error handling implemented
+- [ ] Multi-tenancy (orgId) considerations included
+- [ ] RBAC permissions properly enforced
+- [ ] Unit tests written and passing
+- [ ] No linting errors or warnings
+
+### **Before Marking Parent Task Complete**
+- [ ] All sub-tasks marked as `[x]`
+- [ ] Full test suite passes
+- [ ] No temporary code or files remain
+- [ ] Documentation updated if needed
+- [ ] Commit message follows conventional format
+- [ ] Changes aligned with original PRD requirements
+
+## Communication Protocol
+
+### **After Each Sub-Task**
+```
+✅ Sub-task X.Y completed: [brief description]
+
+Changes made:
+- [List key changes]
+- [Files modified/created]
+
+Ready to proceed to sub-task X.Z? (y/n)
+```
+
+### **After Parent Task**
+```
+🎉 Parent task X.0 completed: [title]
+
+Summary:
+- [Major accomplishments]
+- [Files created/modified]
+- [Tests status]
+
+All tests passing ✅
+Committed with message: [commit message]
+
+Ready to proceed to next parent task? (y/n)
+```
+
+## DriveFlow Integration Points
+
+### **Always Consider**
+- **Multi-tenancy**: Ensure `orgId` scoping in all database operations
+- **RBAC**: Implement proper role-based access controls
+- **Type Safety**: Use generated types from `@driveflow/contracts`
+- **Performance**: Consider database indexes and query optimization
+- **Security**: Validate inputs and sanitize outputs
+- **Audit**: Log important business operations
+- **Real-time**: Consider if feature needs Socket.IO events
+
+### **Testing Standards**
+- Test happy path and error conditions
+- Include authentication and authorization tests
+- Test multi-tenant data isolation
+- Verify proper input validation
+- Check database constraints and relationships

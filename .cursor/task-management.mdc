@@ -1,0 +1,69 @@
+---
+description: "Task management and organization rules"
+---
+
+# DriveFlow Task Management Rules
+
+## Task Organization
+- **PRDs**: Store in `/tasks/prd-[feature-name].md`
+- **Task Lists**: Store in `/tasks/tasks-[prd-name].md`
+- **Bug Reports**: Store in `/tasks/bug-[issue-name].md` 
+- **Technical Specs**: Store in `/tasks/tech-[component-name].md`
+- **Documentation Tasks**: Store in `/tasks/docs-[topic].md`
+
+## Complete Workflow
+### 1. PRD Creation Process
+1. **Initial Request**: User describes feature need
+2. **Clarifying Questions**: Ask specific DriveFlow context questions
+3. **Generate PRD**: Use structured template with DriveFlow considerations
+4. **Save Document**: Store in `/tasks/` directory
+5. **Link References**: Connect to existing schema and documentation
+
+### 2. Task Generation Process
+1. **PRD Analysis**: Read and understand existing PRD requirements
+2. **Codebase Assessment**: Identify existing components and patterns
+3. **Parent Tasks**: Generate 5-7 high-level implementation tasks
+4. **User Confirmation**: Wait for "Go" before detailed breakdown
+5. **Sub-Tasks**: Create actionable development steps
+6. **File Identification**: List all files needing creation/modification
+7. **Save Task List**: Store as `tasks-[prd-name].md`
+
+### 3. Task Execution Process
+1. **One Sub-Task at a Time**: Complete current before requesting permission for next
+2. **Sub-Task Protocol**: Implement → Test → Mark Complete → Request Permission
+3. **Parent Task Protocol**: All sub-tasks complete → Run full test suite → Clean up → Commit
+4. **Quality Gates**: Ensure DriveFlow standards, multi-tenancy, RBAC, and testing
+5. **Progress Tracking**: Maintain task list and relevant files section
+6. **Communication**: Clear status updates and permission requests
+
+## Task Tracking Integration
+- Reference existing database models from [apps/api/prisma/schema.prisma](mdc:apps/api/prisma/schema.prisma)
+- Consider multi-tenancy and RBAC requirements
+- Align with monorepo structure and package boundaries
+- Include testing and documentation requirements
+
+## Implementation Planning
+- Break features into phases aligned with sprint cycles
+- Consider dependencies between packages and applications
+- Plan database migrations with proper safety measures
+- Include mobile and web implementation considerations
+
+## Quality Gates
+- All tasks must include acceptance criteria
+- Database changes require migration plans
+- API changes need contract updates
+- Frontend changes must consider both web and mobile
+- Security and performance implications documented
+
+## Documentation Standards
+- Link to relevant existing documentation
+- Update architecture diagrams when needed
+- Include code examples using DriveFlow patterns
+- Reference shared components and utilities
+
+## Review Process
+- Technical feasibility assessment
+- Security and privacy review
+- Performance impact analysis
+- User experience considerations
+- Business value validation

@@ -1,0 +1,168 @@
+---
+description: "Rules for generating detailed task lists from PRDs"
+---
+
+# Task Generation Rules for DriveFlow
+
+## Purpose
+Generate detailed, step-by-step task lists from existing Product Requirements Documents (PRDs) to guide developers through feature implementation.
+
+## Process Flow
+1. **Receive PRD Reference**: User points to specific PRD file in `/tasks/`
+2. **Analyze PRD**: Read and understand functional requirements, user stories, and technical considerations
+3. **Assess Current State**: Review existing codebase architecture and identify reusable components
+4. **Generate Parent Tasks**: Create 5-7 high-level implementation tasks
+5. **Wait for Confirmation**: User responds with "Go" to proceed
+6. **Generate Sub-Tasks**: Break down each parent task into actionable steps
+7. **Identify Files**: List all files that need creation or modification
+8. **Save Task List**: Store as `tasks-[prd-file-name].md` in `/tasks/` directory
+
+## DriveFlow Codebase Assessment
+When analyzing current state, consider:
+
+### Existing Architecture
+- **API Structure**: [apps/api/src/](mdc:apps/api/src/) with NestJS modules
+- **Database Schema**: [apps/api/prisma/schema.prisma](mdc:apps/api/prisma/schema.prisma)
+- **Shared Contracts**: [packages/contracts/](mdc:packages/contracts/) for Zod schemas
+- **UI Components**: [packages/ui/](mdc:packages/ui/) for reusable components
+- **Client Libraries**: [packages/clients/](mdc:packages/clients/) for API access
+
+### Key Patterns to Follow
+- **Multi-tenancy**: All data scoped by `orgId`
+- **RBAC**: Role-based access (owner, admin, instructor, student)
+- **Repository Pattern**: Database access through `*.repo.ts` files
+- **Contract-First**: Types from `@driveflow/contracts`
+- **Event-Driven**: Background jobs with BullMQ
+
+### Existing Features to Consider
+- User management and organization structure
+- Booking and scheduling system
+- Payment processing with Stripe
+- GPS tracking for lessons
+- Messaging and notifications
+- Audit logging and compliance
+
+## Task Generation Guidelines
+
+### Parent Task Categories
+Typically organize around these areas:
+1. **Database Schema Updates** (if needed)
+2. **API Implementation** (controllers, services, repositories)
+3. **Frontend Components** (web and/or mobile)
+4. **Integration Points** (external services, real-time features)
+5. **Testing & Documentation**
+
+### Sub-Task Granularity
+Break down to actionable items that:
+- Can be completed in 1-4 hours
+- Have clear acceptance criteria
+- Reference specific files and functions
+- Consider error handling and edge cases
+- Include testing requirements
+
+## File Identification Strategy
+
+### API Files
+```
+apps/api/src/modules/[feature]/
+├── [feature].module.ts      # NestJS module
+├── [feature].controller.ts  # HTTP endpoints
+├── [feature].service.ts     # Business logic
+├── [feature].repo.ts        # Database access
+├── dto/                     # Data transfer objects
+└── guards/                  # Authorization guards
+```
+
+### Frontend Files
+```
+apps/web/src/
+├── app/[feature]/          # Next.js routes
+├── components/[feature]/   # Feature components
+└── hooks/use-[feature].ts  # Custom hooks
+
+apps/mobile/src/
+├── screens/[Feature]/      # Mobile screens
+└── components/[Feature]/   # Mobile components
+```
+
+### Shared Files
+```
+packages/contracts/src/
+├── [feature]/              # Zod schemas
+└── events/                 # Event definitions
+
+packages/ui/src/components/ # Reusable UI components
+```
+
+## Required Output Format
+
+```markdown
+# Task List: [Feature Name]
+
+## Relevant Files
+
+### New Files to Create
+- `apps/api/src/modules/[feature]/[feature].module.ts` - NestJS module definition
+- `apps/api/src/modules/[feature]/[feature].controller.ts` - HTTP endpoints
+- `apps/api/src/modules/[feature]/[feature].service.ts` - Business logic
+- `apps/api/src/modules/[feature]/[feature].repo.ts` - Database access
+- `packages/contracts/src/[feature]/index.ts` - Zod schemas and types
+
+### Existing Files to Modify
+- `apps/api/prisma/schema.prisma` - Add new models/fields
+- `apps/web/src/app/dashboard/layout.tsx` - Add navigation
+- `packages/ui/src/components/index.ts` - Export new components
+
+### Test Files
+- `apps/api/src/modules/[feature]/[feature].service.spec.ts` - Service unit tests
+- `apps/api/src/modules/[feature]/[feature].controller.spec.ts` - Controller tests
+- `apps/web/src/components/[feature]/[Feature].test.tsx` - Component tests
+
+### Notes
+- Follow DriveFlow architecture patterns and multi-tenancy requirements
+- Use `@driveflow/contracts` for all type definitions
+- Implement proper RBAC with role guards
+- Include orgId filtering for all database operations
+- Add audit logging for business-critical operations
+
+## Tasks
+
+- [ ] 1.0 Database Schema & Contracts
+  - [ ] 1.1 [Specific schema changes]
+  - [ ] 1.2 [Zod schema definitions]
+  - [ ] 1.3 [Migration and type generation]
+
+- [ ] 2.0 API Implementation
+  - [ ] 2.1 [Repository layer]
+  - [ ] 2.2 [Service layer]
+  - [ ] 2.3 [Controller endpoints]
+  - [ ] 2.4 [Authorization guards]
+
+- [ ] 3.0 Frontend Components
+  - [ ] 3.1 [Core components]
+  - [ ] 3.2 [Forms and validation]
+  - [ ] 3.3 [Data fetching hooks]
+
+- [ ] 4.0 Integration & Events
+  - [ ] 4.1 [Real-time features]
+  - [ ] 4.2 [Background jobs]
+  - [ ] 4.3 [External service integration]
+
+- [ ] 5.0 Testing & Documentation
+  - [ ] 5.1 [Unit tests]
+  - [ ] 5.2 [Integration tests]
+  - [ ] 5.3 [Documentation updates]
+```
+
+## Quality Standards
+- **DriveFlow-Specific**: Consider existing schema, patterns, and multi-tenancy
+- **Junior Developer Ready**: Clear, specific steps with file references
+- **Testable**: Each task includes testing requirements
+- **Secure**: RBAC and data privacy considerations included
+- **Scalable**: Performance and architecture implications considered
+
+## Interaction Model
+1. Generate parent tasks and present to user
+2. Wait for "Go" confirmation before generating sub-tasks
+3. Provide complete task breakdown with file identification
+4. Save to `/tasks/tasks-[prd-name].md` format

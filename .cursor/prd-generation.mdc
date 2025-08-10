@@ -1,0 +1,107 @@
+---
+description: "Rules for generating Product Requirements Documents (PRDs)"
+---
+
+# PRD Generation Rules for DriveFlow
+
+## Purpose
+Generate detailed Product Requirements Documents (PRDs) for new DriveFlow features following a structured process.
+
+## Process Flow
+1. **Receive Feature Request**: User provides initial feature description
+2. **Ask Clarifying Questions**: Gather detailed requirements before writing
+3. **Generate Structured PRD**: Create comprehensive document
+4. **Save to Tasks**: Store as `prd-[feature-name].md` in `/tasks/` directory
+
+## Required Clarifying Questions
+Always ask these before generating a PRD:
+
+### Business Context
+- What problem does this feature solve for driving schools?
+- Who is the primary user? (Owner, Admin, Instructor, Student, Guardian)
+- How does this align with DriveFlow's core CRM functionality?
+
+### Functional Requirements
+- What are the key user actions/workflows?
+- What data needs to be displayed or captured?
+- How does this integrate with existing features? (Bookings, Payments, Scheduling)
+
+### Technical Context
+- Does this require new database tables/fields?
+- Are there external integrations needed? (Stripe, Maps, SMS/Email)
+- Should this be real-time or batch processed?
+
+### DriveFlow-Specific Questions
+- Which organization roles need access? (RBAC considerations)
+- Is this multi-tenant safe? (orgId scoping)
+- Does this affect the mobile app, web app, or both?
+- Are there GPS/location tracking requirements?
+
+## PRD Structure Template
+
+```markdown
+# Feature Name
+
+## Overview
+Brief description and problem statement
+
+## Goals
+- Specific, measurable objectives
+- Business value and user benefits
+
+## User Stories
+- As a [role], I want to [action] so that [benefit]
+- Include primary and secondary user flows
+
+## Functional Requirements
+1. Numbered, specific requirements
+2. Clear acceptance criteria
+3. Error handling scenarios
+
+## Non-Goals (Out of Scope)
+- Explicit boundaries
+- Future considerations
+
+## Design Considerations
+- UI/UX requirements
+- Component usage from packages/ui
+- Mobile vs web considerations
+
+## Technical Requirements
+- Database schema changes (reference Prisma models)
+- API endpoints needed (/v1/resource pattern)
+- Integration points (Stripe, messaging, etc.)
+- Real-time features (Socket.IO events)
+
+## Multi-Tenancy & Security
+- Organization scoping (orgId)
+- Role-based access control
+- Data privacy considerations
+
+## Success Metrics
+- How to measure feature success
+- Analytics/tracking requirements
+
+## Implementation Phases
+- Break down into deliverable phases
+- Dependencies on other features
+
+## Open Questions
+- Unresolved technical decisions
+- Areas needing stakeholder input
+```
+
+## DriveFlow Context Integration
+When generating PRDs, always consider:
+
+- **Existing Schema**: Reference [apps/api/prisma/schema.prisma](mdc:apps/api/prisma/schema.prisma)
+- **Current Features**: Build on existing booking, payment, scheduling flows
+- **Documentation**: Align with [docs/database/](mdc:docs/database/) architecture
+- **Multi-tenancy**: Ensure org isolation and proper RBAC
+- **Mobile-first**: Consider both web and mobile user experiences
+
+## Quality Standards
+- **Junior Developer Ready**: Clear, unambiguous requirements
+- **Actionable**: Specific enough to estimate and implement
+- **Testable**: Each requirement has clear acceptance criteria
+- **Scalable**: Consider performance and growth implications
