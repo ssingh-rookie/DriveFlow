@@ -30,6 +30,9 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard, Public } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthenticatedUser } from './strategies/jwt.strategy';
+import { RoleGuard } from './guards/role.guard';
+import { OrgScopeGuard } from './guards/org-scope.guard';
+import { Permissions } from './decorators/roles.decorator';
 
 @ApiTags('Authentication')
 @Controller('v1/auth')
@@ -125,7 +128,8 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+  @Permissions('profile:read')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current user profile' })
   @ApiResponse({
@@ -143,7 +147,8 @@ export class AuthController {
   }
 
   @Patch('me')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+  @Permissions('profile:write')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiResponse({

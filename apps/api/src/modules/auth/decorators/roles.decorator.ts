@@ -44,7 +44,7 @@ export const Permissions = (...permissions: PermissionAction[]) =>
  */
 export const OrgScoped = () => {
   return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
-    SetMetadata(ORG_CONTEXT_KEY, true)(target, propertyKey, descriptor);
+    EnsureOrgContext()(target, propertyKey, descriptor);
   };
 };
 
