@@ -56,11 +56,22 @@ export class AuthService {
 
     const user = await this.authRepo.findUserByEmailWithPassword(email);
     if (!user || !user.password) {
+      await this.authRepo.logSecurityEvent({
+        event: 'login_failed',
+        severity: 'medium',
+        details: { reason: 'User not found', email },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 
     const isPasswordValid = await PasswordUtil.verifyPassword(password, user.password);
     if (!isPasswordValid) {
+      await this.authRepo.logSecurityEvent({
+        userId: user.id,
+        event: 'login_failed',
+        severity: 'medium',
+        details: { reason: 'Invalid password' },
+      });
       throw new UnauthorizedException('Invalid credentials');
     }
 

@@ -61,6 +61,9 @@ describe('AuthRepository', () => {
     studentGuardian: {
       findMany: jest.fn(),
     },
+    auditLog: {
+      create: jest.fn(),
+    },
   };
 
   beforeEach(async () => {
@@ -344,6 +347,56 @@ describe('AuthRepository', () => {
         expired: 15,
         used: 10
       });
+    });
+  });
+
+  describe('Audit Logging', () => {
+    it('should log an authentication event to the console and database', async () => {
+      const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+      mockPrismaService.auditLog.create.mockResolvedValue({} as any);
+
+      const authEvent = {
+        userId: 'user-123',
+        event: 'test_event',
+        metadata: { orgId: 'org-456', data: 'test-data' },
+        ipAddress: '192.168.1.1',
+        userAgent: 'test-agent',
+      };
+
+      await repository.logAuthEvent(authEvent);
+
+      expect(consoleLogSpy).toHaveBeenCalled();
+      expect(mockPrismaService.auditLog.create).toHaveBeenCalledWith({
+        data: {
+          orgId: 'org-456',
+          actorUserId: 'user-123',
+          action: 'test_event',
+          entityType: 'Auth',
+          entityId: 'user-123',
+          after: { orgId: 'org-456', data: 'test-data' },
+          ip: '192.168.1.1',
+        },
+      });
+
+      consoleLogSpy.mockRestore();
+    });
+
+    it('should log a security event to the console', async () => {
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+      const securityEvent = {
+        userId: 'user-123',
+        event: 'test_security_event',
+        severity: 'high' as const,
+        details: { info: 'test-info' },
+        ipAddress: '192.168.1.1',
+        userAgent: 'test-agent',
+      };
+
+      await repository.logSecurityEvent(securityEvent);
+
+      expect(consoleWarnSpy).toHaveBeenCalled();
+      consoleWarnSpy.mockRestore();
     });
   });
 });
