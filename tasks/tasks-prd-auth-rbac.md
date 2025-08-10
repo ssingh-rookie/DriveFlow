@@ -60,7 +60,7 @@
   - [x] 2.1 Create auth module structure (module, controller, service, repo files)
   - [x] 2.2 Install required dependencies (bcrypt, jsonwebtoken, passport-jwt)
   - [x] 2.3 Implement password hashing utilities with bcrypt (cost factor 10)
-  - [ ] 2.4 Create user repository methods for authentication queries
+  - [x] 2.4 Create user repository methods for authentication queries
   - [ ] 2.5 Create refresh token repository with rotation management
   - [ ] 2.6 Set up environment variables for JWT secrets
 
