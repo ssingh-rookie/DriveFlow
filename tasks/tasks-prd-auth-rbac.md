@@ -3,10 +3,10 @@
 ## Relevant Files
 
 ### New Files to Create
-- `apps/api/src/modules/auth/auth.module.ts` - NestJS authentication module
-- `apps/api/src/modules/auth/auth.controller.ts` - Auth endpoints (login, refresh, logout)
-- `apps/api/src/modules/auth/auth.service.ts` - Authentication business logic
-- `apps/api/src/modules/auth/auth.repo.ts` - Database access for users and refresh tokens
+- `apps/api/src/modules/auth/auth.module.ts` - NestJS authentication module ✅
+- `apps/api/src/modules/auth/auth.controller.ts` - Auth endpoints (login, refresh, logout) ✅
+- `apps/api/src/modules/auth/auth.service.ts` - Authentication business logic ✅
+- `apps/api/src/modules/auth/auth.repo.ts` - Database access for users and refresh tokens ✅
 - `apps/api/src/modules/auth/guards/jwt-auth.guard.ts` - JWT authentication guard
 - `apps/api/src/modules/auth/guards/role.guard.ts` - Role-based authorization guard
 - `apps/api/src/modules/auth/guards/org-scope.guard.ts` - Organization scoping guard
@@ -48,7 +48,7 @@
 
 ## Tasks
 
-- [ ] 1.0 Database Schema & Contracts Enhancement
+- [x] 1.0 Database Schema & Contracts Enhancement
   - [x] 1.1 Add password field to User model in Prisma schema
   - [x] 1.2 Create RefreshToken model with rotation fields (jti, rotation_id, used, expires_at)
   - [x] 1.3 Run Prisma migration to apply database changes
@@ -57,9 +57,9 @@
   - [x] 1.6 Export auth schemas from contracts index and regenerate types
 
 - [ ] 2.0 Core Authentication Infrastructure
-  - [ ] 2.1 Create auth module structure (module, controller, service, repo files)
-  - [ ] 2.2 Install required dependencies (bcrypt, jsonwebtoken, passport-jwt)
-  - [ ] 2.3 Implement password hashing utilities with bcrypt (cost factor 10)
+  - [x] 2.1 Create auth module structure (module, controller, service, repo files)
+  - [x] 2.2 Install required dependencies (bcrypt, jsonwebtoken, passport-jwt)
+  - [x] 2.3 Implement password hashing utilities with bcrypt (cost factor 10)
   - [ ] 2.4 Create user repository methods for authentication queries
   - [ ] 2.5 Create refresh token repository with rotation management
   - [ ] 2.6 Set up environment variables for JWT secrets
