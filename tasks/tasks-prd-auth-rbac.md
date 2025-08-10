@@ -69,7 +69,7 @@
   - [x] 3.2 Implement access token generation with proper claims (sub, role, orgId, exp)
   - [x] 3.3 Implement refresh token generation with rotation tracking
   - [x] 3.4 Create token validation middleware with error handling
-  - [ ] 3.5 Implement refresh token rotation logic (single-use, replay detection)
+  - [x] 3.5 Implement refresh token rotation logic (single-use, replay detection)
   - [ ] 3.6 Add JWT blacklist/revocation mechanism
 
 - [ ] 4.0 Role-Based Authorization System
