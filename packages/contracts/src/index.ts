@@ -18,9 +18,12 @@ import {
   JwtPayloadDto,
   AuthErrorDto,
   RegisterDto,
-  PermissionCheckDto,
-  PermissionResponseDto
 } from './auth/auth.schemas';
+
+import {
+  PermissionCheckDto,
+  PermissionResponseDto,
+} from './auth/permission.schemas';
 
 /** ===== Example schemas (replace with real ones) ===== */
 export const BookingCreate = z.object({

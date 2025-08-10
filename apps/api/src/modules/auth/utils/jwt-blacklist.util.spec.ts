@@ -65,8 +65,8 @@ describe('JwtBlacklistUtil', () => {
   });
 
   afterEach(() => {
-    // Clean up any intervals
-    jest.clearAllTimers();
+    service.stopCleanupInterval();
+    jest.clearAllMocks();
   });
 
   it('should be defined', () => {
@@ -538,7 +538,7 @@ describe('JwtBlacklistUtil', () => {
       const setIntervalSpy = jest.spyOn(global, 'setInterval');
 
       // Create a new instance with cleanup enabled
-      const serviceWithCleanup = new JwtBlacklistUtil(authRepo, jwtUtil, true);
+      const serviceWithCleanup = new JwtBlacklistUtil(authRepo, jwtUtil);
 
       expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30 * 60 * 1000);
 
@@ -552,7 +552,7 @@ describe('JwtBlacklistUtil', () => {
       const clearIntervalSpy = jest.spyOn(global, 'clearInterval');
 
       // Create a new instance with cleanup enabled
-      const serviceWithCleanup = new JwtBlacklistUtil(authRepo, jwtUtil, true);
+      const serviceWithCleanup = new JwtBlacklistUtil(authRepo, jwtUtil);
       
       // Stop the cleanup
       serviceWithCleanup.stopCleanupInterval();

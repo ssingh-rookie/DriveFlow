@@ -56,12 +56,8 @@ export class JwtBlacklistUtil {
   constructor(
     private readonly authRepo: AuthRepository,
     private readonly jwtUtil: JwtUtil,
-    private readonly startCleanup: boolean = true,
   ) {
-    // Start cleanup interval for expired blacklist entries (unless disabled for testing)
-    if (startCleanup) {
-      this.startCleanupInterval();
-    }
+    this.startCleanupInterval();
   }
 
   /**

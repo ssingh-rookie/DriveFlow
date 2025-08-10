@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
@@ -11,22 +10,13 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RoleGuard } from './guards/role.guard';
 import { OrgScopeGuard } from './guards/org-scope.guard';
+import { JwtUtil } from './utils/jwt.util';
+import { RefreshTokenRotationUtil } from './utils/refresh-token-rotation.util';
+import { JwtBlacklistUtil } from './utils/jwt-blacklist.util';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
-        signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
-          issuer: 'driveflow-api',
-          audience: 'driveflow-app'
-        }
-      }),
-      inject: [ConfigService]
-    })
   ],
   controllers: [AuthController],
   providers: [
@@ -35,7 +25,10 @@ import { OrgScopeGuard } from './guards/org-scope.guard';
     JwtStrategy,
     JwtAuthGuard,
     RoleGuard,
-    OrgScopeGuard
+    OrgScopeGuard,
+    JwtUtil,
+    RefreshTokenRotationUtil,
+    JwtBlacklistUtil,
   ],
   exports: [
     AuthService,
@@ -44,7 +37,6 @@ import { OrgScopeGuard } from './guards/org-scope.guard';
     RoleGuard,
     OrgScopeGuard,
     PassportModule,
-    JwtModule
-  ]
+  ],
 })
 export class AuthModule {}
