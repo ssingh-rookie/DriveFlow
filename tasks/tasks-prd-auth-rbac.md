@@ -65,7 +65,7 @@
   - [x] 2.6 Set up environment variables for JWT secrets
 
 - [ ] 3.0 JWT Implementation & Token Management
-  - [ ] 3.1 Create JWT utility functions (generate, verify, decode)
+  - [x] 3.1 Create JWT utility functions (generate, verify, decode)
   - [ ] 3.2 Implement access token generation with proper claims (sub, role, orgId, exp)
   - [ ] 3.3 Implement refresh token generation with rotation tracking
   - [ ] 3.4 Create token validation middleware with error handling
