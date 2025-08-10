@@ -77,7 +77,7 @@
   - [x] 4.2 Implement role-based authorization guard with permission matrix
   - [x] 4.3 Create organization scoping guard for multi-tenancy
   - [x] 4.4 Implement permission checking utilities (can user access resource)
-  - [ ] 4.5 Create decorators for roles and current user extraction
+  - [x] 4.5 Create decorators for roles and current user extraction
   - [ ] 4.6 Add scoped permission logic (instructor assigned students, parent-child relationship)
 
 - [ ] 5.0 API Integration & Security Middleware

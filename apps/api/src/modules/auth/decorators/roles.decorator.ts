@@ -1,6 +1,6 @@
 import { SetMetadata } from '@nestjs/common';
 import { OrgRole, PermissionAction } from '@driveflow/contracts';
-import { ROLES_KEY, PERMISSIONS_KEY, ORG_SCOPED_KEY } from '../guards/role.guard';
+import { ROLES_KEY, PERMISSIONS_KEY } from '../guards/role.guard';
 
 /**
  * Roles Decorator
@@ -41,7 +41,11 @@ export const Permissions = (...permissions: PermissionAction[]) =>
  *   // Will check scoped permissions for instructors/students
  * }
  */
-export const OrgScoped = () => SetMetadata(ORG_SCOPED_KEY, true);
+export const OrgScoped = () => {
+  return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
+    SetMetadata(ORG_CONTEXT_KEY, true)(target, propertyKey, descriptor);
+  };
+};
 
 /**
  * Owner Only Decorator
