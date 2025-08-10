@@ -1,6 +1,7 @@
 import { SetMetadata } from '@nestjs/common';
 import { OrgRole, PermissionAction } from '@driveflow/contracts';
 import { ROLES_KEY, PERMISSIONS_KEY } from '../guards/role.guard';
+import { EnsureOrgContext } from './ensure-org-context.decorator';
 
 /**
  * Roles Decorator

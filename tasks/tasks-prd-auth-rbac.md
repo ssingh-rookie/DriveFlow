@@ -78,7 +78,7 @@
   - [x] 4.3 Create organization scoping guard for multi-tenancy
   - [x] 4.4 Implement permission checking utilities (can user access resource)
   - [x] 4.5 Create decorators for roles and current user extraction
-  - [ ] 4.6 Add scoped permission logic (instructor assigned students, parent-child relationship)
+  - [x] 4.6 Add scoped permission logic (instructor assigned students, parent-child relationship)
 
 - [ ] 5.0 API Integration & Security Middleware
   - [ ] 5.1 Implement auth controller endpoints (POST /auth/login, /auth/refresh, /auth/logout)

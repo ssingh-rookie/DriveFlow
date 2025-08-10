@@ -1,0 +1,182 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Request,
+  UnauthorizedException,
+  BadRequestException
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+
+import {
+  LoginDto,
+  RefreshTokenDto,
+  LogoutDto,
+  AuthResponseDto,
+  RefreshResponseDto,
+  UserProfileDto,
+  UpdateUserProfileDto,
+  ChangePasswordDto,
+  AuthErrorDto
+} from '@driveflow/contracts';
+
+import { AuthService } from './auth.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtPayload } from './types/auth.types';
+
+@ApiTags('Authentication')
+@Controller('v1/auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'User login' })
+  @ApiResponse({
+    status: 200,
+    description: 'Login successful',
+    type: () => AuthResponseDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid credentials',
+    type: () => AuthErrorDto
+  })
+  async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
+    try {
+      return await this.authService.login(loginDto);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  @ApiResponse({
+    status: 200,
+    description: 'Token refreshed successfully',
+    type: () => RefreshResponseDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid refresh token',
+    type: () => AuthErrorDto
+  })
+  async refreshToken(@Body() refreshDto: RefreshTokenDto): Promise<RefreshResponseDto> {
+    try {
+      return await this.authService.refreshToken(refreshDto.refreshToken);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'User logout' })
+  @ApiResponse({
+    status: 204,
+    description: 'Logout successful'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: () => AuthErrorDto
+  })
+  async logout(
+    @Body() logoutDto: LogoutDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<void> {
+    await this.authService.logout(logoutDto.refreshToken, user.sub);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+    type: () => UserProfileDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: () => AuthErrorDto
+  })
+  async getProfile(@CurrentUser() user: JwtPayload): Promise<UserProfileDto> {
+    return await this.authService.getUserProfile(user.sub);
+  }
+
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({
+    status: 200,
+    description: 'Profile updated successfully',
+    type: () => UserProfileDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid request',
+    type: () => AuthErrorDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: () => AuthErrorDto
+  })
+  async updateProfile(
+    @Body() updateDto: UpdateUserProfileDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<UserProfileDto> {
+    try {
+      return await this.authService.updateUserProfile(user.sub, updateDto);
+    } catch (error) {
+      throw new BadRequestException('Invalid profile data');
+    }
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully'
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid password data',
+    type: () => AuthErrorDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+    type: () => AuthErrorDto
+  })
+  async changePassword(
+    @Body() changePasswordDto: ChangePasswordDto,
+    @CurrentUser() user: JwtPayload
+  ): Promise<{ message: string }> {
+    try {
+      await this.authService.changePassword(
+        user.sub,
+        changePasswordDto.currentPassword,
+        changePasswordDto.newPassword
+      );
+      return { message: 'Password changed successfully' };
+    } catch (error) {
+      throw new BadRequestException('Invalid password data');
+    }
+  }
+}

@@ -94,13 +94,14 @@ export class PermissionsUtil {
     }
 
     if (userRole === 'student') {
+      const { childStudentIds = [] } = userPermissionContext;
       const resourceOwnerId = resource.ownerId;
       const isOwnResource = resourceOwnerId === user.id;
 
-      if (resourceOwnerId && !isOwnResource) {
+      if (resourceOwnerId && !isOwnResource && !childStudentIds.includes(resourceOwnerId)) {
         return {
           allowed: false,
-          reason: `Student '${user.id}' cannot access resource owned by '${resourceOwnerId}'`,
+          reason: `User '${user.id}' cannot access resource owned by '${resourceOwnerId}'`,
         };
       }
     }

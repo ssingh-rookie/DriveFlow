@@ -281,8 +281,6 @@ export class AuthRepository {
       const guardianships = await this.prisma.studentGuardian.findMany({
         where: {
           guardian: {
-            // This would need to be enhanced based on how guardians are linked to users
-            // For now, we'll use email matching as an example
             email: (await this.prisma.user.findUnique({ where: { id: userId } }))?.email
           }
         },

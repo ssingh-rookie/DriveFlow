@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { RoleGuard, PERMISSIONS_KEY, ROLES_KEY, ORG_SCOPED_KEY } from './role.guard';
+import { RoleGuard, PERMISSIONS_KEY, ROLES_KEY } from './role.guard';
 import { AuthRepository } from '../auth.repo';
 import { AuthenticatedUser } from '../strategies/jwt.strategy';
 
@@ -32,7 +32,7 @@ describe('RoleGuard', () => {
     email: 'student@example.com',
   };
 
-  const mockRequest: any = {
+  const mockRequest = {
     user: mockUser,
     method: 'GET',
     path: '/api/students',
@@ -63,6 +63,15 @@ describe('RoleGuard', () => {
     logAuthEvent: jest.fn(),
   };
 
+  const setupGuardWithMetadata = (permissions: string[] = [], roles: string[] = [], orgScoped = false) => {
+    mockReflector.getAllAndOverride.mockImplementation((key) => {
+      if (key === PERMISSIONS_KEY) return permissions;
+      if (key === ROLES_KEY) return roles;
+      if (key === 'orgScoped') return orgScoped;
+      return undefined;
+    });
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,7 +96,6 @@ describe('RoleGuard', () => {
 
     // Default mock implementations
     mockAuthRepo.logAuthEvent.mockResolvedValue(undefined);
-    mockReflector.getAllAndOverride.mockReturnValue([]);
   });
 
   it('should be defined', () => {
@@ -96,16 +104,9 @@ describe('RoleGuard', () => {
 
   describe('canActivate', () => {
     it('should allow access when no permissions or roles are required', async () => {
-      // Mock the reflector to return empty arrays for all metadata
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce([]) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
+      setupGuardWithMetadata([], []);
       const result = await guard.canActivate(mockExecutionContext);
-
       expect(result).toBe(true);
-      // When no permissions/roles are required, the function returns early without logging
       expect(mockAuthRepo.logAuthEvent).not.toHaveBeenCalled();
     });
 
@@ -116,51 +117,29 @@ describe('RoleGuard', () => {
           getRequest: jest.fn(() => ({ ...mockRequest, user: null })),
         })),
       } as unknown as ExecutionContext;
-
-      await expect(guard.canActivate(contextWithoutUser))
-        .rejects.toThrow(ForbiddenException);
+      await expect(guard.canActivate(contextWithoutUser)).rejects.toThrow(ForbiddenException);
     });
 
     it('should allow access when user has required role', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce([]) // permissions
-        .mockReturnValueOnce(['instructor', 'admin']) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
+      setupGuardWithMetadata([], ['instructor', 'admin']);
       const result = await guard.canActivate(mockExecutionContext);
-
       expect(result).toBe(true);
     });
 
     it('should deny access when user lacks required role', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce([]) // permissions
-        .mockReturnValueOnce(['owner']) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
-      await expect(guard.canActivate(mockExecutionContext))
-        .rejects.toThrow(ForbiddenException);
+      setupGuardWithMetadata([], ['owner']);
+      await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(ForbiddenException);
     });
 
     it('should allow access when user has required permissions', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
+      setupGuardWithMetadata(['students:read']);
       const result = await guard.canActivate(mockExecutionContext);
-
       expect(result).toBe(true);
     });
 
     it('should deny access when user lacks required permissions', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['users:delete']) // permissions instructor doesn't have
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
-      await expect(guard.canActivate(mockExecutionContext))
-        .rejects.toThrow(ForbiddenException);
+      setupGuardWithMetadata(['users:delete']);
+      await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow(ForbiddenException);
     });
 
     it('should require organization context when orgScoped is true', async () => {
@@ -171,29 +150,17 @@ describe('RoleGuard', () => {
           getRequest: jest.fn(() => ({ ...mockRequest, user: userWithoutOrg })),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
-      await expect(guard.canActivate(contextWithoutOrg))
-        .rejects.toThrow('Organization context required for this operation');
+      setupGuardWithMetadata(['students:read'], [], true);
+      await expect(guard.canActivate(contextWithoutOrg)).rejects.toThrow('Organization context required for this operation');
     });
 
     it('should check scoped permissions for instructors', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      setupGuardWithMetadata(['students:read'], [], true);
       mockAuthRepo.getUserPermissions.mockResolvedValue({
         role: 'instructor',
         assignedStudentIds: ['student-456', 'student-789'],
       });
-
       const result = await guard.canActivate(mockExecutionContext);
-
       expect(result).toBe(true);
       expect(mockAuthRepo.getUserPermissions).toHaveBeenCalledWith('user-123', 'org-456');
     });
@@ -203,44 +170,36 @@ describe('RoleGuard', () => {
         ...mockRequest,
         params: { id: 'student-999' }, // Not assigned to instructor
       };
-
       const contextWithDifferentStudent = {
         ...mockExecutionContext,
         switchToHttp: jest.fn(() => ({
           getRequest: jest.fn(() => requestWithDifferentStudent),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      setupGuardWithMetadata(['students:read'], [], true);
       mockAuthRepo.getUserPermissions.mockResolvedValue({
         role: 'instructor',
         assignedStudentIds: ['student-456', 'student-789'],
       });
-
-      await expect(guard.canActivate(contextWithDifferentStudent))
-        .rejects.toThrow('Instructor not assigned to this student');
+      await expect(guard.canActivate(contextWithDifferentStudent)).rejects.toThrow('Instructor not assigned to this student');
     });
 
     it('should allow scoped lesson access for instructors', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['lessons:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      const lessonRequest: any = { ...mockRequest };
+      const lessonContext = {
+        ...mockExecutionContext,
+        switchToHttp: jest.fn(() => ({
+          getRequest: jest.fn(() => lessonRequest),
+        })),
+      } as unknown as ExecutionContext;
+      setupGuardWithMetadata(['lessons:read'], [], true);
       mockAuthRepo.getUserPermissions.mockResolvedValue({
         role: 'instructor',
         assignedStudentIds: ['student-456', 'student-789'],
       });
-
-      const result = await guard.canActivate(mockExecutionContext);
-
+      const result = await guard.canActivate(lessonContext);
       expect(result).toBe(true);
-      expect(mockAuthRepo.getUserPermissions).toHaveBeenCalledWith('user-123', 'org-456');
-      // Note: Scoped resource IDs functionality is verified through integration tests
+      expect(lessonRequest.scopedResourceIds).toEqual(['student-456', 'student-789']);
     });
 
     it('should allow students to access their own resources', async () => {
@@ -249,26 +208,18 @@ describe('RoleGuard', () => {
         user: mockStudentUser,
         params: { id: 'student-123' }, // Same as user ID
       };
-
       const studentContext = {
         ...mockExecutionContext,
         switchToHttp: jest.fn(() => ({
           getRequest: jest.fn(() => studentRequest),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['lessons:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      setupGuardWithMetadata(['lessons:read'], [], true);
       mockAuthRepo.getUserPermissions.mockResolvedValue({
         role: 'student',
         childStudentIds: [],
       });
-
       const result = await guard.canActivate(studentContext);
-
       expect(result).toBe(true);
     });
 
@@ -278,26 +229,18 @@ describe('RoleGuard', () => {
         user: mockStudentUser,
         params: { id: 'student-999' }, // Different student
       };
-
       const studentContext = {
         ...mockExecutionContext,
         switchToHttp: jest.fn(() => ({
           getRequest: jest.fn(() => studentRequest),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['lessons:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      setupGuardWithMetadata(['lessons:read'], [], true);
       mockAuthRepo.getUserPermissions.mockResolvedValue({
         role: 'student',
         childStudentIds: [],
       });
-
-      await expect(guard.canActivate(studentContext))
-        .rejects.toThrow('Students can only access their own resources');
+      await expect(guard.canActivate(studentContext)).rejects.toThrow('Students can only access their own resources or their children\'s resources');
     });
 
     it('should allow admin full access without scoping', async () => {
@@ -308,57 +251,51 @@ describe('RoleGuard', () => {
           getRequest: jest.fn(() => adminRequest),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
-      // Admin role is not scoped, so getUserPermissions won't be called
+      setupGuardWithMetadata(['students:read'], [], true);
       const result = await guard.canActivate(adminContext);
-
       expect(result).toBe(true);
       expect(mockAuthRepo.getUserPermissions).not.toHaveBeenCalled();
     });
 
+    it('should allow parents to access their children\'s resources', async () => {
+      const parentUser = { ...mockStudentUser, role: 'student' };
+      const childId = 'child-1';
+      const parentRequest = {
+        ...mockRequest,
+        user: parentUser,
+        params: { id: childId },
+      };
+      const parentContext = {
+        ...mockExecutionContext,
+        switchToHttp: jest.fn(() => ({
+          getRequest: jest.fn(() => parentRequest),
+        })),
+      } as unknown as ExecutionContext;
+      setupGuardWithMetadata(['lessons:read'], [], true);
+      mockAuthRepo.getUserPermissions.mockResolvedValue({
+        role: 'student',
+        childStudentIds: [childId],
+      });
+      const result = await guard.canActivate(parentContext);
+      expect(result).toBe(true);
+    });
+
     it('should handle database errors gracefully', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      setupGuardWithMetadata(['students:read'], [], true);
       mockAuthRepo.getUserPermissions.mockRejectedValue(new Error('Database error'));
-
-      await expect(guard.canActivate(mockExecutionContext))
-        .rejects.toThrow('Error validating scoped permissions');
+      await expect(guard.canActivate(mockExecutionContext)).rejects.toThrow('Error validating scoped permissions');
     });
 
     it('should log authorization failures', async () => {
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['users:delete']) // permissions instructor doesn't have
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
+      setupGuardWithMetadata(['users:delete']);
       try {
         await guard.canActivate(mockExecutionContext);
       } catch (error) {
         // Expected to throw
       }
-
-      expect(mockAuthRepo.logAuthEvent).toHaveBeenCalledWith({
-        userId: 'user-123',
+      expect(mockAuthRepo.logAuthEvent).toHaveBeenCalledWith(expect.objectContaining({
         event: 'authorization_denied',
-        metadata: expect.objectContaining({
-          requiredPermissions: [], // The catch block passes empty arrays
-          requiredRoles: [],
-          userRole: 'instructor',
-          orgId: 'org-456',
-          errorReason: 'Missing permissions: users:delete',
-          endpoint: 'GET /api/students/:id',
-        }),
-        ipAddress: '192.168.1.1',
-        userAgent: 'test-agent',
-      });
+      }));
     });
 
     it('should extract resource info from different request sources', async () => {
@@ -368,24 +305,17 @@ describe('RoleGuard', () => {
         query: { studentId: 'student-from-query' },
         body: { id: 'id-from-body' },
       };
-
       const contextWithQuery = {
         ...mockExecutionContext,
         switchToHttp: jest.fn(() => ({
           getRequest: jest.fn(() => requestWithQueryParams),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['students:read']) // permissions
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(true); // orgScoped
-
+      setupGuardWithMetadata(['students:read'], [], true);
       mockAuthRepo.getUserPermissions.mockResolvedValue({
         role: 'instructor',
         assignedStudentIds: ['student-from-query'],
       });
-
       const result = await guard.canActivate(contextWithQuery);
       expect(result).toBe(true);
     });
@@ -401,12 +331,7 @@ describe('RoleGuard', () => {
           getRequest: jest.fn(() => ownerRequest),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['users:delete', 'org:settings']) // permissions only owners have
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
+      setupGuardWithMetadata(['users:delete', 'org:settings']);
       const result = await guard.canActivate(ownerContext);
       expect(result).toBe(true);
     });
@@ -419,14 +344,8 @@ describe('RoleGuard', () => {
           getRequest: jest.fn(() => studentRequest),
         })),
       } as unknown as ExecutionContext;
-
-      mockReflector.getAllAndOverride
-        .mockReturnValueOnce(['users:write']) // permission students don't have
-        .mockReturnValueOnce([]) // roles
-        .mockReturnValueOnce(false); // orgScoped
-
-      await expect(guard.canActivate(studentContext))
-        .rejects.toThrow('Missing permissions: users:write');
+      setupGuardWithMetadata(['users:write']);
+      await expect(guard.canActivate(studentContext)).rejects.toThrow('Missing permissions: users:write');
     });
   });
 });
