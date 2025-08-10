@@ -15,11 +15,6 @@ export const PERMISSIONS_KEY = 'permissions';
 export const ROLES_KEY = 'roles';
 
 /**
- * Metadata key for organization scoping requirement
- */
-export const ORG_SCOPED_KEY = 'orgScoped';
-
-/**
  * Permission check result interface
  */
 export interface PermissionCheckResult {
@@ -55,16 +50,10 @@ export class RoleGuard implements CanActivate {
       // Get required permissions and roles from decorators
       const requiredPermissions = this.getRequiredPermissions(context);
       const requiredRoles = this.getRequiredRoles(context);
-      const orgScoped = this.getOrgScopedRequirement(context);
 
       // If no permissions or roles specified, allow access
       if (!requiredPermissions.length && !requiredRoles.length) {
         return true;
-      }
-
-      // Check organization scoping if required
-      if (orgScoped && !user.orgId) {
-        throw new ForbiddenException('Organization context required for this operation');
       }
 
       // Check role-based authorization first (simpler check)
@@ -80,8 +69,7 @@ export class RoleGuard implements CanActivate {
         const hasPermissions = await this.checkPermissionAuthorization(
           user,
           requiredPermissions,
-          request,
-          orgScoped
+          request
         );
         
         if (!hasPermissions.allowed) {
@@ -130,8 +118,7 @@ export class RoleGuard implements CanActivate {
   private async checkPermissionAuthorization(
     user: AuthenticatedUser,
     requiredPermissions: PermissionAction[],
-    request: any,
-    orgScoped: boolean = false
+    request: any
   ): Promise<PermissionCheckResult> {
     const userRole = user.role as OrgRole;
     const userPermissions = DEFAULT_PERMISSIONS[userRole] || [];
@@ -149,7 +136,7 @@ export class RoleGuard implements CanActivate {
     }
 
     // For scoped roles (instructor, student), check resource-level permissions
-    if (this.isScopedRole(userRole) && orgScoped && user.orgId) {
+    if (this.isScopedRole(userRole) && user.orgId) {
       const scopeCheck = await this.checkScopedPermissions(user, requiredPermissions, request);
       if (!scopeCheck.allowed) {
         return scopeCheck;
@@ -320,16 +307,6 @@ export class RoleGuard implements CanActivate {
       context.getClass(),
     ]);
     return roles || [];
-  }
-
-  /**
-   * Get organization scoping requirement from decorator metadata
-   */
-  private getOrgScopedRequirement(context: ExecutionContext): boolean {
-    return this.reflector.getAllAndOverride<boolean>(ORG_SCOPED_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]) || false;
   }
 
   /**

@@ -152,6 +152,14 @@ export class AuthRepository {
     });
   }
 
+  async isUserMemberOfOrg(userId: string, orgId: string): Promise<boolean> {
+    const userOrg = await this.prisma.userOrg.findFirst({
+      where: { userId, orgId },
+      select: { id: true }, // Select minimal data for existence check
+    });
+    return !!userOrg;
+  }
+
   // ===== Refresh Token Operations =====
 
   async createRefreshToken(data: {
