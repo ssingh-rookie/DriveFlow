@@ -1,0 +1,65 @@
+# DriveFlow – Cursor/Claude Working Rules (AI must follow)
+
+## Golden principles
+- Contract-first: Types come from @driveflow/contracts (Zod). OpenAPI is generated from Zod. Never invent types or DTOs.
+- Thin controllers, pure services: Controllers only validate, authorize, and delegate. Side-effects live in job handlers.
+- One source of truth: Prisma schema (DB) + Zod schemas (IO). Keep them in sync in the same PR.
+- Small diffs win: Prefer adding functions over editing large ones. Keep files < 300 LoC when possible.
+
+## Monorepo boundaries
+- apps/api, apps/worker: NestJS. Use DI, guards for RBAC, and repositories (Prisma).
+- apps/web, apps/mobile: Consume generated OpenAPI types and the shared fetch client. No raw fetch.
+- packages/contracts: Zod schemas & OpenAPI generation. Only place where request/response shapes are defined.
+- packages/clients: Generated OpenAPI types + typed HTTP helper.
+- packages/ui: shadcn components. No business logic.
+- packages/testing: test factories and helpers.
+
+## Coding rules (hard)
+1. VALIDATION: All inbound data must be validated with Zod `.parse`. No unchecked `any`.
+2. AUTHZ: Enforce RBAC with Nest guards. Roles: owner | admin | instructor | student.
+3. ERRORS: Use typed ProblemDetails helpers; never throw raw strings. Map infra errors to 4xx/5xx consistently.
+4. IO SEPARATION: Put Stripe/Postmark/Twilio/Maps calls in worker jobs (BullMQ). Controllers queue jobs only.
+5. DB ACCESS: Only repositories talk to Prisma. Services never import Prisma directly.
+6. LOGGING: Use structured logger; never log PII or secrets. Prefix logs with domain context.
+7. TESTS: Every PR that adds routes or complex logic must add tests (happy path + one failure + auth).
+8. MIGRATIONS: Destructive changes require a safe plan + data backfill in the PR description.
+9. TELEMETRY: Add tracing spans on hot paths (bookings, payments, gps ingest).
+10. CONSISTENCY: Prefer existing libs (TanStack Query, react-hook-form, zodResolver, Socket.IO). Do not add similar deps.
+
+## File & naming conventions
+- Controllers: `<resource>.controller.ts` with route prefix `/v1/<resource>`.
+- Services: pure methods, no IO, tested in isolation.
+- Repos: `<resource>.repo.ts` with only Prisma access.
+- DTO/Contracts: pulled from `@driveflow/contracts`. No local copies.
+- Events: `<domain>.<event>.ts` as typed payloads in packages/contracts (used by workers).
+
+## API style
+- REST, versioned `/v1`.
+- Idempotency keys for POST where appropriate (payments).
+- Pagination: cursor-based (`?cursor=...&limit=...`).
+- Errors: RFC7807 ProblemDetails shape.
+
+## Frontend rules
+- Server-first data (Query). Minimal local state.
+- Forms: react-hook-form + zodResolver.
+- No direct window.fetch; use `@driveflow/clients` helper.
+- Real-time via Socket.IO client; subscribe/unsubscribe on mount/unmount.
+
+## Security & privacy
+- Data residency: AU. Never export PII in logs.
+- Background location: explicit consent per-lesson; app must show persistent indicator (mobile).
+- Stripe webhooks: verify signatures; handle retries idempotently.
+
+## PR checklist (AI must self-verify)
+- [ ] Updated Zod contract and regenerated OpenAPI + types (`pnpm gen`).
+- [ ] Added/updated tests.
+- [ ] Updated docs/domain state table if states changed.
+- [ ] No secrets in code. Env vars fetched via typed env helper.
+- [ ] Lint/Typecheck/Test/Build all pass locally.
+
+## Banned
+- Ad-hoc DTO interfaces
+- Business logic inside controllers
+- Direct Prisma access from controllers/services
+- Fetch without the typed client
+- Disabling lint/test to pass CI

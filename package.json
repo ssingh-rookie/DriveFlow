@@ -1,0 +1,49 @@
+{
+  "name": "driveflow",
+  "private": true,
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "clean": "turbo run clean && rimraf node_modules",
+    "check": "turbo run lint typecheck test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "e2e": "turbo run e2e",
+    "gen": "pnpm gen:openapi && pnpm gen:clients",
+    "gen:openapi": "tsx scripts/openapi-from-zod.ts",
+    "gen:clients": "openapi-typescript packages/contracts/openapi.json -o packages/clients/src/types.ts",
+    "prisma:generate": "pnpm -C apps/api prisma generate",
+    "prisma:migrate:dev": "pnpm -C apps/api prisma migrate dev",
+    "prisma:migrate:deploy": "pnpm -C apps/api prisma migrate deploy",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.10.0",
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.2.2",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22.5.0",
+    "@types/ws": "^8.5.10",
+    "@vercel/ncc": "^0.38.1",
+    "dotenv-cli": "^7.4.2",
+    "eslint": "^9.9.0",
+    "husky": "^9.1.4",
+    "jest": "^29.7.0",
+    "openapi-typescript": "^7.4.2",
+    "prettier": "^3.3.3",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.0.6",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.1.0",
+    "@prisma/client": "^5.18.0",
+    "bullmq": "^5.7.7",
+    "openapi-fetch": "^0.11.2",
+    "zod": "^3.23.8"
+  }
+}
