@@ -23,6 +23,7 @@ describe('AuthService', () => {
     getUserPrimaryOrg: jest.fn(),
     createRefreshToken: jest.fn(),
     logAuthEvent: jest.fn(),
+    logSecurityEvent: jest.fn(),
   };
 
   const mockJwtUtil = {

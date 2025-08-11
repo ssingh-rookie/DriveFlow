@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './core/prisma/prisma.module';
 import { ConfigModule } from './core/config/config.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 
@@ -10,6 +11,7 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
     ConfigModule,
     PrismaModule,
     AuthModule,
+    PaymentsModule,
   ],
   providers: [
     {

@@ -5,6 +5,7 @@ extendZodWithOpenApi(z);
 
 // ===== Export Auth Schemas =====
 export * from './auth';
+export * from './payments';
 
 // Import auth schemas for OpenAPI registration
 import {
@@ -24,6 +25,7 @@ import {
   PermissionCheckDto,
   PermissionResponseDto,
 } from './auth/permission.schemas';
+import { StripeConnectLinkDto, PayoutReadinessDto } from './payments';
 
 /** ===== Example schemas (replace with real ones) ===== */
 export const BookingCreate = z.object({
@@ -61,6 +63,8 @@ registry.register('ChangePasswordDto', ChangePasswordDto);
 registry.register('AuthErrorDto', AuthErrorDto);
 registry.register('PermissionCheckDto', PermissionCheckDto);
 registry.register('PermissionResponseDto', PermissionResponseDto);
+registry.register('StripeConnectLinkDto', StripeConnectLinkDto);
+registry.register('PayoutReadinessDto', PayoutReadinessDto);
 
 // Register existing schemas
 registry.register('Booking', Booking);
@@ -208,6 +212,42 @@ registry.registerPath({
     }
   },
   tags: ['User Profile']
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/instructors/{instructorId}/stripe/connect-link',
+  summary: 'Get a Stripe Connect onboarding link for an instructor',
+  tags: ['Instructors'],
+  security: [{ BearerAuth: [] }],
+  responses: {
+    '200': {
+      description: 'Onboarding link created successfully',
+      content: {
+        'application/json': {
+          schema: StripeConnectLinkDto,
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/instructors/{instructorId}/payout-readiness',
+  summary: 'Get the payout readiness status for an instructor',
+  tags: ['Instructors'],
+  security: [{ BearerAuth: [] }],
+  responses: {
+    '200': {
+      description: 'Payout readiness status retrieved successfully',
+      content: {
+        'application/json': {
+          schema: PayoutReadinessDto,
+        },
+      },
+    },
+  },
 });
 
 /** ===== Generate final OpenAPI document ===== */

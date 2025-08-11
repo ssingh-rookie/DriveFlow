@@ -28,7 +28,7 @@ describe('JwtBlacklistUtil', () => {
           provide: JwtBlacklistUtil,
           useFactory: (authRepo: AuthRepository, jwtUtil: JwtUtil) => {
             // Disable cleanup interval for testing
-            return new JwtBlacklistUtil(authRepo, jwtUtil, false);
+            return new JwtBlacklistUtil(authRepo, jwtUtil);
           },
           inject: [AuthRepository, JwtUtil],
         },
