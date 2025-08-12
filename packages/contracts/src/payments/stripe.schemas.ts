@@ -12,6 +12,13 @@ export const StripeOnboardingStatus = z.enum([
   'complete',
 ]);
 
+export const PayoutReadinessStatus = z.enum([
+  'Not Started',
+  'Pending',
+  'Restricted',
+  'Complete',
+]);
+
 // ===== API DTOs =====
 
 export const StripeConnectLinkDto = z.object({
@@ -25,6 +32,11 @@ export const PayoutReadinessDto = z.object({
   missing_requirements: z.array(z.string()),
   last_updated: z.string().datetime(),
 }).openapi('PayoutReadinessDto');
+
+export const StripeAccountStatusDto = z.object({
+  status: PayoutReadinessStatus,
+  requirements: z.array(z.string()),
+}).openapi('StripeAccountStatusDto');
 
 // ===== Webhook Schemas =====
 
@@ -42,3 +54,5 @@ export type StripeOnboardingStatus = z.infer<typeof StripeOnboardingStatus>;
 export type StripeConnectLinkDto = z.infer<typeof StripeConnectLinkDto>;
 export type PayoutReadinessDto = z.infer<typeof PayoutReadinessDto>;
 export type StripeWebhookEvent = z.infer<typeof StripeWebhookEvent>;
+export type PayoutReadinessStatus = z.infer<typeof PayoutReadinessStatus>;
+export type StripeAccountStatusDto = z.infer<typeof StripeAccountStatusDto>;

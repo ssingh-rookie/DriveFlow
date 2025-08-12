@@ -252,7 +252,7 @@ registry.registerPath({
 
 /** ===== Generate final OpenAPI document ===== */
 const generator = new OpenApiGeneratorV3(registry.definitions);
-export const openApiDoc = generator.generateDocument({
+export const openApiDoc: any = generator.generateDocument({
   openapi: '3.0.3',
   info: { 
     title: 'DriveFlow API', 

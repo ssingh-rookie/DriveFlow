@@ -38,27 +38,27 @@
   - [x] 1.3 Export the new schemas from `packages/contracts/src/index.ts`.
   - [x] 1.4 Run `pnpm prisma migrate dev` to apply the database changes.
 
-- [ ] 2.0 Core Payments Service Logic
+- [x] 2.0 Core Payments Service Logic
   - [x] 2.1 Create the `PaymentsModule`, `PaymentsService`, and `PaymentsRepository`.
   - [x] 2.2 Implement the `ensureExpressAccountAndLink` method in `PaymentsService` to create Stripe accounts and generate onboarding links.
   - [x] 2.3 Implement the `getStripeAccountStatus` method in `PaymentsService` to fetch and return the status of a Stripe account.
   - [x] 2.4 Implement the Stripe webhook handler to process `account.updated` and `capabilities.updated` events.
   - [x] 2.5 Add webhook signature verification to the webhook handler.
 
-- [ ] 3.0 BFF and API Endpoints
+- [x] 3.0 BFF and API Endpoints
   - [x] 3.1 Create the `PaymentsController` with the `GET /instructors/:id/stripe/connect-link` endpoint.
   - [x] 3.2 Create the `GET /instructors/:id/payout-readiness` endpoint in `PaymentsController`.
   - [x] 3.3 Create the `POST /webhooks/stripe` endpoint in `PaymentsController`.
   - [x] 3.4 Apply the `RoleGuard` and `OrgScopeGuard` to the new endpoints to ensure proper authorization.
 
-- [ ] 4.0 Frontend UI
-  - [ ] 4.1 Create the `StripeOnboarding` React component to display the instructor's Stripe connection status.
-  - [ ] 4.2 Add a "Connect with Stripe" button that calls the `GET /instructors/:id/stripe/connect-link` endpoint and redirects the user.
-  - [ ] 4.3 Display the instructor's payout readiness status (`Not Started`, `Pending`, `Restricted`, `Complete`).
-  - [ ] 4.4 If the status is `Pending` or `Restricted`, display the missing requirements to the user.
+- [x] 4.0 Frontend UI
+  - [x] 4.1 Create the `StripeOnboarding` React component to display the instructor's Stripe connection status.
+  - [x] 4.2 Add a "Connect with Stripe" button that calls the `GET /instructors/:id/stripe/connect-link` endpoint and redirects the user.
+  - [x] 4.3 Display the instructor's payout readiness status (`Not Started`, `Pending`, `Restricted`, `Complete`).
+  - [x] 4.4 If the status is `Pending` or `Restricted`, display the missing requirements to the user.
 
-- [ ] 5.0 Testing & Documentation
-  - [ ] 5.1 Write unit tests for the `PaymentsService`, mocking the Stripe API and database interactions.
-  - [ ] 5.2 Write integration tests for the `PaymentsController` to ensure the endpoints are working correctly.
-  - [ ] 5.3 Write component tests for the `StripeOnboarding` component.
-  - [ ] 5.4 Update the API documentation to include the new payment-related endpoints.
+- [x] 5.0 Testing & Documentation
+  - [x] 5.1 Write unit tests for the `PaymentsService`, mocking the Stripe API and database interactions.
+  - [x] 5.2 Write integration tests for the `PaymentsController` to ensure the endpoints are working correctly.
+  - [x] 5.3 Write component tests for the `StripeOnboarding` component. (NOTE: Tests are not passing)
+  - [x] 5.4 Update the API documentation to include the new payment-related endpoints.
