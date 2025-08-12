@@ -1,12 +1,12 @@
-import { Controller, Get, Param } from '@nestjs/common';
-import { Public } from '../auth/guards/jwt-auth.guard';
+import { Controller, Get, Param } from '@nestjs/common'
+import { Public } from '../auth/guards/jwt-auth.guard'
 
 @Controller('payments')
 export class SimplePaymentsController {
   @Get('health')
   @Public()
   health() {
-    return { status: 'ok', message: 'Simple payments controller is working' };
+    return { status: 'ok', message: 'Simple payments controller is working' }
   }
 
   @Get('instructors/:id/payout-readiness')
@@ -15,8 +15,8 @@ export class SimplePaymentsController {
     // Return mock data for testing
     return {
       status: 'Not Started',
-      requirements: ['Please connect your Stripe account']
-    };
+      requirements: ['Please connect your Stripe account'],
+    }
   }
 
   @Get('instructors/:id/stripe/connect-link')
@@ -24,7 +24,7 @@ export class SimplePaymentsController {
   getConnectLink(@Param('id') instructorId: string) {
     // Return mock data for testing
     return {
-      onboardingLink: 'https://connect.stripe.com/express/setup'
-    };
+      onboardingLink: 'https://connect.stripe.com/express/setup',
+    }
   }
 }

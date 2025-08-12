@@ -1,33 +1,33 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../core/prisma/prisma.service';
-import { User, UserOrg, RefreshToken, OrgRole, Prisma, Org } from '@prisma/client';
+import type { Org, OrgRole, RefreshToken, User, UserOrg } from '@prisma/client'
+import type { PrismaService } from '../../core/prisma/prisma.service'
+import { Injectable } from '@nestjs/common'
 
 export interface AuthEvent {
-  userId: string;
-  event: string;
-  metadata: Record<string, any>;
-  ipAddress?: string;
-  userAgent?: string;
+  userId: string
+  event: string
+  metadata: Record<string, any>
+  ipAddress?: string
+  userAgent?: string
 }
 
 export interface UserWithOrgs extends User {
   orgs: (UserOrg & {
     org: {
-      id: string;
-      name: string;
-    };
-  })[];
+      id: string
+      name: string
+    }
+  })[]
 }
 
 export interface RefreshTokenData {
-  id: string;
-  userId: string;
-  jti: string;
-  rotationId: string;
-  tokenHash: string;
-  used: boolean;
-  expiresAt: Date;
-  createdAt: Date;
+  id: string
+  userId: string
+  jti: string
+  rotationId: string
+  tokenHash: string
+  used: boolean
+  expiresAt: Date
+  createdAt: Date
 }
 
 @Injectable()
@@ -38,30 +38,30 @@ export class AuthRepository {
 
   async findUserByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
-      where: { email }
-    });
+      where: { email },
+    })
   }
 
   async findUserByEmailWithPassword(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
       // Include password field for authentication
-    });
+    })
   }
 
   async createUser(data: {
-    email: string;
-    fullName: string;
-    password: string;
-    phone?: string;
+    email: string
+    fullName: string
+    password: string
+    phone?: string
   }): Promise<User> {
     return this.prisma.user.create({
       data: {
         ...data,
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    });
+        updatedAt: new Date(),
+      },
+    })
   }
 
   async updateUserPassword(userId: string, hashedPassword: string): Promise<User> {
@@ -69,23 +69,23 @@ export class AuthRepository {
       where: { id: userId },
       data: {
         password: hashedPassword,
-        updatedAt: new Date()
-      }
-    });
+        updatedAt: new Date(),
+      },
+    })
   }
 
   async verifyUserExists(userId: string): Promise<boolean> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true }
-    });
-    return !!user;
+      select: { id: true },
+    })
+    return !!user
   }
 
   async findUserById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
-      where: { id }
-    });
+      where: { id },
+    })
   }
 
   async findUserWithOrgs(userId: string): Promise<UserWithOrgs | null> {
@@ -97,13 +97,13 @@ export class AuthRepository {
             org: {
               select: {
                 id: true,
-                name: true
-              }
-            }
-          }
-        }
-      }
-    });
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    })
   }
 
   async updateUser(userId: string, data: Partial<Pick<User, 'fullName' | 'phone' | 'password'>>): Promise<User> {
@@ -111,9 +111,9 @@ export class AuthRepository {
       where: { id: userId },
       data: {
         ...data,
-        updatedAt: new Date()
-      }
-    });
+        updatedAt: new Date(),
+      },
+    })
   }
 
   // ===== Organization Operations =====
@@ -123,9 +123,9 @@ export class AuthRepository {
       where: { userId },
       orderBy: [
         { role: 'asc' }, // Owner first, then admin, etc.
-        { createdAt: 'asc' } // Earliest first
-      ]
-    });
+        { createdAt: 'asc' }, // Earliest first
+      ],
+    })
   }
 
   async getUserOrgByRole(userId: string, orgId: string, role: OrgRole): Promise<UserOrg | null> {
@@ -133,9 +133,9 @@ export class AuthRepository {
       where: {
         userId,
         orgId,
-        role
-      }
-    });
+        role,
+      },
+    })
   }
 
   async getUserOrganizations(userId: string): Promise<UserOrg[]> {
@@ -149,21 +149,21 @@ export class AuthRepository {
           },
         },
       },
-    });
+    })
   }
 
   async isUserMemberOfOrg(userId: string, orgId: string): Promise<boolean> {
     const userOrg = await this.prisma.userOrg.findFirst({
       where: { userId, orgId },
       select: { id: true },
-    });
-    return !!userOrg;
+    })
+    return !!userOrg
   }
 
   async createOrganization(data: { name: string }): Promise<Org> {
     return this.prisma.org.create({
       data,
-    });
+    })
   }
 
   async addUserToOrg(userId: string, orgId: string, role: OrgRole): Promise<UserOrg> {
@@ -173,48 +173,48 @@ export class AuthRepository {
         orgId,
         role,
       },
-    });
+    })
   }
 
   // ===== Refresh Token Operations =====
 
   async createRefreshToken(data: {
-    userId: string;
-    jti: string;
-    rotationId: string;
-    tokenHash: string;
-    expiresAt: Date;
+    userId: string
+    jti: string
+    rotationId: string
+    tokenHash: string
+    expiresAt: Date
   }): Promise<RefreshToken> {
     return this.prisma.refreshToken.create({
-      data
-    });
+      data,
+    })
   }
 
   async findRefreshTokenByJti(jti: string): Promise<RefreshTokenData | null> {
     return this.prisma.refreshToken.findUnique({
-      where: { jti }
-    });
+      where: { jti },
+    })
   }
 
   async markRefreshTokenAsUsed(jti: string): Promise<void> {
     await this.prisma.refreshToken.update({
       where: { jti },
-      data: { used: true }
-    });
+      data: { used: true },
+    })
   }
 
   async revokeRefreshTokensByRotationId(rotationId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
       where: { rotationId },
-      data: { used: true }
-    });
+      data: { used: true },
+    })
   }
 
   async revokeAllUserRefreshTokens(userId: string): Promise<void> {
     await this.prisma.refreshToken.updateMany({
       where: { userId },
-      data: { used: true }
-    });
+      data: { used: true },
+    })
   }
 
   async cleanupExpiredRefreshTokens(): Promise<number> {
@@ -222,11 +222,11 @@ export class AuthRepository {
       where: {
         OR: [
           { expiresAt: { lt: new Date() } },
-          { used: true }
-        ]
-      }
-    });
-    return result.count;
+          { used: true },
+        ],
+      },
+    })
+    return result.count
   }
 
   async countUserActiveRefreshTokens(userId: string): Promise<number> {
@@ -234,46 +234,46 @@ export class AuthRepository {
       where: {
         userId,
         used: false,
-        expiresAt: { gt: new Date() }
-      }
-    });
+        expiresAt: { gt: new Date() },
+      },
+    })
   }
 
   async getUserRefreshTokens(userId: string): Promise<RefreshTokenData[]> {
     return this.prisma.refreshToken.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
-    });
+      orderBy: { createdAt: 'desc' },
+    })
   }
 
   async deleteRefreshToken(jti: string): Promise<void> {
     await this.prisma.refreshToken.delete({
-      where: { jti }
-    });
+      where: { jti },
+    })
   }
 
   // ===== Permission Operations =====
 
   async getUserPermissions(userId: string, orgId: string): Promise<{
-    role: OrgRole;
-    assignedStudentIds?: string[];
-    childStudentIds?: string[];
+    role: OrgRole
+    assignedStudentIds?: string[]
+    childStudentIds?: string[]
   } | null> {
     const userOrg = await this.prisma.userOrg.findFirst({
-      where: { userId, orgId }
-    });
+      where: { userId, orgId },
+    })
 
     if (!userOrg) {
-      return null;
+      return null
     }
 
     const result: {
-      role: OrgRole;
-      assignedStudentIds?: string[];
-      childStudentIds?: string[];
+      role: OrgRole
+      assignedStudentIds?: string[]
+      childStudentIds?: string[]
     } = {
-      role: userOrg.role
-    };
+      role: userOrg.role,
+    }
 
     // For instructors, get assigned students
     if (userOrg.role === 'instructor') {
@@ -282,13 +282,13 @@ export class AuthRepository {
         include: {
           bookings: {
             select: { studentId: true },
-            distinct: ['studentId']
-          }
-        }
-      });
+            distinct: ['studentId'],
+          },
+        },
+      })
 
       if (instructor) {
-        result.assignedStudentIds = instructor.bookings.map(b => b.studentId);
+        result.assignedStudentIds = instructor.bookings.map(b => b.studentId)
       }
     }
 
@@ -297,16 +297,16 @@ export class AuthRepository {
       const guardianships = await this.prisma.studentGuardian.findMany({
         where: {
           guardian: {
-            email: (await this.prisma.user.findUnique({ where: { id: userId } }))?.email
-          }
+            email: (await this.prisma.user.findUnique({ where: { id: userId } }))?.email,
+          },
         },
-        select: { studentId: true }
-      });
+        select: { studentId: true },
+      })
 
-      result.childStudentIds = guardianships.map(g => g.studentId);
+      result.childStudentIds = guardianships.map(g => g.studentId)
     }
 
-    return result;
+    return result
   }
 
   // ===== Audit Logging =====
@@ -318,8 +318,8 @@ export class AuthRepository {
       timestamp: new Date().toISOString(),
       metadata: event.metadata,
       ipAddress: event.ipAddress,
-      userAgent: event.userAgent
-    });
+      userAgent: event.userAgent,
+    })
 
     // Write to database audit log if orgId is provided
     if (event.metadata?.orgId) {
@@ -332,23 +332,24 @@ export class AuthRepository {
             entityType: 'Auth',
             entityId: event.userId,
             after: event.metadata,
-            ip: event.ipAddress || 'unknown'
-          }
-        });
-      } catch (error) {
+            ip: event.ipAddress || 'unknown',
+          },
+        })
+      }
+      catch (error) {
         // Don't fail auth operations due to audit log failures
-        console.error('Failed to write audit log:', error);
+        console.error('Failed to write audit log:', error)
       }
     }
   }
 
   async logSecurityEvent(data: {
-    userId?: string;
-    event: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    details: Record<string, any>;
-    ipAddress?: string;
-    userAgent?: string;
+    userId?: string
+    event: string
+    severity: 'low' | 'medium' | 'high' | 'critical'
+    details: Record<string, any>
+    ipAddress?: string
+    userAgent?: string
   }): Promise<void> {
     const logData = {
       timestamp: new Date().toISOString(),
@@ -357,15 +358,15 @@ export class AuthRepository {
       userId: data.userId,
       details: data.details,
       ipAddress: data.ipAddress,
-      userAgent: data.userAgent
-    };
+      userAgent: data.userAgent,
+    }
 
     // Always log security events to console
-    console.warn(`Security Event [${data.severity.toUpperCase()}]: ${data.event}`, logData);
+    console.warn(`Security Event [${data.severity.toUpperCase()}]: ${data.event}`, logData)
 
     // For critical security events, you might want to send alerts
     if (data.severity === 'critical') {
-      console.error('CRITICAL SECURITY EVENT:', logData);
+      console.error('CRITICAL SECURITY EVENT:', logData)
       // TODO: Integrate with alerting system (e.g., send to Slack, email, etc.)
     }
   }
@@ -376,38 +377,38 @@ export class AuthRepository {
     return this.prisma.user.count({
       where: {
         orgs: {
-          some: {} // Has at least one organization
-        }
-      }
-    });
+          some: {}, // Has at least one organization
+        },
+      },
+    })
   }
 
   async getRefreshTokenStats(): Promise<{
-    total: number;
-    active: number;
-    expired: number;
-    used: number;
+    total: number
+    active: number
+    expired: number
+    used: number
   }> {
-    const now = new Date();
-    
+    const now = new Date()
+
     const [total, active, expired, used] = await Promise.all([
       this.prisma.refreshToken.count(),
       this.prisma.refreshToken.count({
         where: {
           used: false,
-          expiresAt: { gt: now }
-        }
+          expiresAt: { gt: now },
+        },
       }),
       this.prisma.refreshToken.count({
         where: {
-          expiresAt: { lte: now }
-        }
+          expiresAt: { lte: now },
+        },
       }),
       this.prisma.refreshToken.count({
-        where: { used: true }
-      })
-    ]);
+        where: { used: true },
+      }),
+    ])
 
-    return { total, active, expired, used };
+    return { total, active, expired, used }
   }
 }

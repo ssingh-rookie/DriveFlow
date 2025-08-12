@@ -1,27 +1,29 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { AuthenticatedUser } from '../strategies/jwt.strategy';
-import { AuthRepository } from '../auth.repo';
-import { PermissionAction, OrgRole, DEFAULT_PERMISSIONS } from '@driveflow/contracts';
+import type { OrgRole, PermissionAction } from '@driveflow/contracts'
+import type { CanActivate, ExecutionContext } from '@nestjs/common'
+import type { Reflector } from '@nestjs/core'
+import type { AuthRepository } from '../auth.repo'
+import type { AuthenticatedUser } from '../strategies/jwt.strategy'
+import { DEFAULT_PERMISSIONS } from '@driveflow/contracts'
+import { ForbiddenException, Injectable, Logger } from '@nestjs/common'
 
 /**
  * Metadata key for required permissions
  */
-export const PERMISSIONS_KEY = 'permissions';
+export const PERMISSIONS_KEY = 'permissions'
 
 /**
  * Metadata key for required roles
  */
-export const ROLES_KEY = 'roles';
+export const ROLES_KEY = 'roles'
 
 /**
  * Permission check result interface
  */
 export interface PermissionCheckResult {
-  allowed: boolean;
-  reason?: string;
-  scoped?: boolean;
-  scopedResourceIds?: string[];
+  allowed: boolean
+  reason?: string
+  scoped?: boolean
+  scopedResourceIds?: string[]
 }
 
 /**
@@ -31,7 +33,7 @@ export interface PermissionCheckResult {
  */
 @Injectable()
 export class RoleGuard implements CanActivate {
-  private readonly logger = new Logger(RoleGuard.name);
+  private readonly logger = new Logger(RoleGuard.name)
 
   constructor(
     private readonly reflector: Reflector,
@@ -39,28 +41,28 @@ export class RoleGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const user = request.user as AuthenticatedUser;
+    const request = context.switchToHttp().getRequest()
+    const user = request.user as AuthenticatedUser
 
     if (!user) {
-      throw new ForbiddenException('User authentication required');
+      throw new ForbiddenException('User authentication required')
     }
 
     try {
       // Get required permissions and roles from decorators
-      const requiredPermissions = this.getRequiredPermissions(context);
-      const requiredRoles = this.getRequiredRoles(context);
+      const requiredPermissions = this.getRequiredPermissions(context)
+      const requiredRoles = this.getRequiredRoles(context)
 
       // If no permissions or roles specified, allow access
       if (!requiredPermissions.length && !requiredRoles.length) {
-        return true;
+        return true
       }
 
       // Check role-based authorization first (simpler check)
       if (requiredRoles.length > 0) {
-        const hasRole = this.checkRoleAuthorization(user, requiredRoles);
+        const hasRole = this.checkRoleAuthorization(user, requiredRoles)
         if (!hasRole.allowed) {
-          throw new ForbiddenException(hasRole.reason || 'Insufficient role permissions');
+          throw new ForbiddenException(hasRole.reason || 'Insufficient role permissions')
         }
       }
 
@@ -69,27 +71,28 @@ export class RoleGuard implements CanActivate {
         const hasPermissions = await this.checkPermissionAuthorization(
           user,
           requiredPermissions,
-          request
-        );
-        
+          request,
+        )
+
         if (!hasPermissions.allowed) {
-          throw new ForbiddenException(hasPermissions.reason || 'Insufficient permissions');
+          throw new ForbiddenException(hasPermissions.reason || 'Insufficient permissions')
         }
 
         // Store scoped resource info for controllers to use
         if (hasPermissions.scoped && hasPermissions.scopedResourceIds) {
-          request.scopedResourceIds = hasPermissions.scopedResourceIds;
+          request.scopedResourceIds = hasPermissions.scopedResourceIds
         }
       }
 
       // Log successful authorization
-      await this.logAuthorizationEvent(user, requiredPermissions, requiredRoles, true, request);
-      
-      return true;
-    } catch (error) {
+      await this.logAuthorizationEvent(user, requiredPermissions, requiredRoles, true, request)
+
+      return true
+    }
+    catch (error) {
       // Log failed authorization
-      await this.logAuthorizationEvent(user, [], [], false, request, error.message);
-      throw error;
+      await this.logAuthorizationEvent(user, [], [], false, request, error.message)
+      throw error
     }
   }
 
@@ -98,18 +101,18 @@ export class RoleGuard implements CanActivate {
    */
   private checkRoleAuthorization(
     user: AuthenticatedUser,
-    requiredRoles: OrgRole[]
+    requiredRoles: OrgRole[],
   ): PermissionCheckResult {
-    const userRole = user.role as OrgRole;
+    const userRole = user.role as OrgRole
 
     if (!requiredRoles.includes(userRole)) {
       return {
         allowed: false,
-        reason: `Required role: ${requiredRoles.join(' or ')}, user has: ${userRole}`
-      };
+        reason: `Required role: ${requiredRoles.join(' or ')}, user has: ${userRole}`,
+      }
     }
 
-    return { allowed: true };
+    return { allowed: true }
   }
 
   /**
@@ -118,32 +121,32 @@ export class RoleGuard implements CanActivate {
   private async checkPermissionAuthorization(
     user: AuthenticatedUser,
     requiredPermissions: PermissionAction[],
-    request: any
+    request: any,
   ): Promise<PermissionCheckResult> {
-    const userRole = user.role as OrgRole;
-    const userPermissions = DEFAULT_PERMISSIONS[userRole] || [];
+    const userRole = user.role as OrgRole
+    const userPermissions = DEFAULT_PERMISSIONS[userRole] || []
 
     // Check if user has basic permission
     const missingPermissions = requiredPermissions.filter(
-      permission => !userPermissions.includes(permission)
-    );
+      permission => !userPermissions.includes(permission),
+    )
 
     if (missingPermissions.length > 0) {
       return {
         allowed: false,
-        reason: `Missing permissions: ${missingPermissions.join(', ')}`
-      };
+        reason: `Missing permissions: ${missingPermissions.join(', ')}`,
+      }
     }
 
     // For scoped roles (instructor, student), check resource-level permissions
     if (this.isScopedRole(userRole) && user.orgId) {
-      const scopeCheck = await this.checkScopedPermissions(user, requiredPermissions, request);
+      const scopeCheck = await this.checkScopedPermissions(user, requiredPermissions, request)
       if (!scopeCheck.allowed) {
-        return scopeCheck;
+        return scopeCheck
       }
     }
 
-    return { allowed: true };
+    return { allowed: true }
   }
 
   /**
@@ -152,30 +155,30 @@ export class RoleGuard implements CanActivate {
   private async checkScopedPermissions(
     user: AuthenticatedUser,
     requiredPermissions: PermissionAction[],
-    request: any
+    request: any,
   ): Promise<PermissionCheckResult> {
-    const userRole = user.role as OrgRole;
+    const userRole = user.role as OrgRole
 
     try {
       // Get user's permission context from database
-      const permissions = await this.authRepo.getUserPermissions(user.id, user.orgId!);
-      
+      const permissions = await this.authRepo.getUserPermissions(user.id, user.orgId!)
+
       if (!permissions) {
         return {
           allowed: false,
-          reason: 'User not found in organization context'
-        };
+          reason: 'User not found in organization context',
+        }
       }
 
       // Extract resource information from request
-      const resourceInfo = this.extractResourceInfo(request);
+      const resourceInfo = this.extractResourceInfo(request)
 
       if (userRole === 'instructor') {
         return this.checkInstructorScopedPermissions(
           permissions.assignedStudentIds || [],
           requiredPermissions,
-          resourceInfo
-        );
+          resourceInfo,
+        )
       }
 
       if (userRole === 'student') {
@@ -183,17 +186,18 @@ export class RoleGuard implements CanActivate {
           user.id,
           permissions.childStudentIds || [],
           requiredPermissions,
-          resourceInfo
-        );
+          resourceInfo,
+        )
       }
 
-      return { allowed: true };
-    } catch (error) {
-      this.logger.error(`Error checking scoped permissions for user ${user.id}:`, error);
+      return { allowed: true }
+    }
+    catch (error) {
+      this.logger.error(`Error checking scoped permissions for user ${user.id}:`, error)
       return {
         allowed: false,
-        reason: 'Error validating scoped permissions'
-      };
+        reason: 'Error validating scoped permissions',
+      }
     }
   }
 
@@ -203,40 +207,40 @@ export class RoleGuard implements CanActivate {
   private checkInstructorScopedPermissions(
     assignedStudentIds: string[],
     requiredPermissions: PermissionAction[],
-    resourceInfo: { type?: string; id?: string; studentId?: string }
+    resourceInfo: { type?: string, id?: string, studentId?: string },
   ): PermissionCheckResult {
     // For student-related permissions, check if instructor is assigned to the student
-    const studentPermissions = ['students:read', 'students:write'];
-    const hasStudentPermission = requiredPermissions.some(p => studentPermissions.includes(p));
+    const studentPermissions = ['students:read', 'students:write']
+    const hasStudentPermission = requiredPermissions.some(p => studentPermissions.includes(p))
 
     if (hasStudentPermission) {
-      const targetStudentId = resourceInfo.studentId || resourceInfo.id;
-      
+      const targetStudentId = resourceInfo.studentId || resourceInfo.id
+
       if (targetStudentId && !assignedStudentIds.includes(targetStudentId)) {
         return {
           allowed: false,
-          reason: 'Instructor not assigned to this student'
-        };
+          reason: 'Instructor not assigned to this student',
+        }
       }
     }
 
     // For lesson/booking permissions, allow if related to assigned students
-    const lessonPermissions = ['lessons:read', 'lessons:write', 'lessons:create'];
-    const bookingPermissions = ['bookings:read', 'bookings:write'];
-    
-    const hasLessonOrBookingPermission = requiredPermissions.some(p => 
-      [...lessonPermissions, ...bookingPermissions].includes(p)
-    );
+    const lessonPermissions = ['lessons:read', 'lessons:write', 'lessons:create']
+    const bookingPermissions = ['bookings:read', 'bookings:write']
+
+    const hasLessonOrBookingPermission = requiredPermissions.some(p =>
+      [...lessonPermissions, ...bookingPermissions].includes(p),
+    )
 
     if (hasLessonOrBookingPermission) {
       return {
         allowed: true,
         scoped: true,
-        scopedResourceIds: assignedStudentIds
-      };
+        scopedResourceIds: assignedStudentIds,
+      }
     }
 
-    return { allowed: true };
+    return { allowed: true }
   }
 
   /**
@@ -246,45 +250,45 @@ export class RoleGuard implements CanActivate {
     userId: string,
     childStudentIds: string[],
     requiredPermissions: PermissionAction[],
-    resourceInfo: { type?: string; id?: string; studentId?: string }
+    resourceInfo: { type?: string, id?: string, studentId?: string },
   ): PermissionCheckResult {
     // Students can only access their own resources
-    const targetStudentId = resourceInfo.studentId || resourceInfo.id;
-    
+    const targetStudentId = resourceInfo.studentId || resourceInfo.id
+
     if (targetStudentId && targetStudentId !== userId && !childStudentIds.includes(targetStudentId)) {
       return {
         allowed: false,
-        reason: 'Students can only access their own resources or their children\'s resources'
-      };
+        reason: 'Students can only access their own resources or their children\'s resources',
+      }
     }
 
     return {
       allowed: true,
       scoped: true,
-      scopedResourceIds: [userId, ...childStudentIds]
-    };
+      scopedResourceIds: [userId, ...childStudentIds],
+    }
   }
 
   /**
    * Extract resource information from request
    */
-  private extractResourceInfo(request: any): { type?: string; id?: string; studentId?: string } {
-    const params = request.params || {};
-    const query = request.query || {};
-    const body = request.body || {};
+  private extractResourceInfo(request: any): { type?: string, id?: string, studentId?: string } {
+    const params = request.params || {}
+    const query = request.query || {}
+    const body = request.body || {}
 
     return {
       type: params.resourceType || query.resourceType || body.resourceType,
       id: params.id || query.id || body.id,
-      studentId: params.studentId || query.studentId || body.studentId
-    };
+      studentId: params.studentId || query.studentId || body.studentId,
+    }
   }
 
   /**
    * Check if role requires scoped permissions
    */
   private isScopedRole(role: OrgRole): boolean {
-    return ['instructor', 'student'].includes(role);
+    return ['instructor', 'student'].includes(role)
   }
 
   /**
@@ -294,8 +298,8 @@ export class RoleGuard implements CanActivate {
     const permissions = this.reflector.getAllAndOverride<PermissionAction[]>(PERMISSIONS_KEY, [
       context.getHandler(),
       context.getClass(),
-    ]);
-    return permissions || [];
+    ])
+    return permissions || []
   }
 
   /**
@@ -305,8 +309,8 @@ export class RoleGuard implements CanActivate {
     const roles = this.reflector.getAllAndOverride<OrgRole[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
-    ]);
-    return roles || [];
+    ])
+    return roles || []
   }
 
   /**
@@ -318,11 +322,11 @@ export class RoleGuard implements CanActivate {
     roles: OrgRole[],
     success: boolean,
     request: any,
-    errorReason?: string
+    errorReason?: string,
   ): Promise<void> {
     try {
-      const endpoint = `${request.method} ${request.route?.path || request.path}`;
-      
+      const endpoint = `${request.method} ${request.route?.path || request.path}`
+
       await this.authRepo.logAuthEvent({
         userId: user.id,
         event: success ? 'authorization_granted' : 'authorization_denied',
@@ -336,9 +340,10 @@ export class RoleGuard implements CanActivate {
         },
         ipAddress: this.extractIpAddress(request),
         userAgent: request.headers['user-agent'],
-      });
-    } catch (error) {
-      this.logger.error('Failed to log authorization event:', error);
+      })
+    }
+    catch (error) {
+      this.logger.error('Failed to log authorization event:', error)
       // Don't fail the authorization due to logging errors
     }
   }
@@ -348,11 +353,11 @@ export class RoleGuard implements CanActivate {
    */
   private extractIpAddress(request: any): string {
     return (
-      request.headers['x-forwarded-for']?.split(',')[0] ||
-      request.headers['x-real-ip'] ||
-      request.connection?.remoteAddress ||
-      request.socket?.remoteAddress ||
-      'unknown'
-    );
+      request.headers['x-forwarded-for']?.split(',')[0]
+      || request.headers['x-real-ip']
+      || request.connection?.remoteAddress
+      || request.socket?.remoteAddress
+      || 'unknown'
+    )
   }
 }

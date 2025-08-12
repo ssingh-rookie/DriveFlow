@@ -1,15 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { JwtAuthGuard, IS_PUBLIC_KEY } from './jwt-auth.guard';
+import type { ExecutionContext } from '@nestjs/common'
+import type { TestingModule } from '@nestjs/testing'
+import { UnauthorizedException } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
+import { Test } from '@nestjs/testing'
+import { IS_PUBLIC_KEY, JwtAuthGuard } from './jwt-auth.guard'
 
-describe('JwtAuthGuard', () => {
-  let guard: JwtAuthGuard;
-  let reflector: Reflector;
+describe('jwtAuthGuard', () => {
+  let guard: JwtAuthGuard
+  let reflector: Reflector
 
   const mockReflector = {
     getAllAndOverride: jest.fn(),
-  };
+  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,17 +22,17 @@ describe('JwtAuthGuard', () => {
           useValue: mockReflector,
         },
       ],
-    }).compile();
+    }).compile()
 
-    guard = module.get<JwtAuthGuard>(JwtAuthGuard);
-    reflector = module.get<Reflector>(Reflector);
+    guard = module.get<JwtAuthGuard>(JwtAuthGuard)
+    reflector = module.get<Reflector>(Reflector)
 
-    jest.clearAllMocks();
-  });
+    jest.clearAllMocks()
+  })
 
   it('should be defined', () => {
-    expect(guard).toBeDefined();
-  });
+    expect(guard).toBeDefined()
+  })
 
   describe('canActivate', () => {
     const mockExecutionContext = {
@@ -43,47 +45,47 @@ describe('JwtAuthGuard', () => {
           headers: {},
         })),
       })),
-    } as unknown as ExecutionContext;
+    } as unknown as ExecutionContext
 
     it('should allow access to public endpoints', () => {
-      mockReflector.getAllAndOverride.mockReturnValue(true);
+      mockReflector.getAllAndOverride.mockReturnValue(true)
 
-      const result = guard.canActivate(mockExecutionContext);
+      const result = guard.canActivate(mockExecutionContext)
 
-      expect(result).toBe(true);
+      expect(result).toBe(true)
       expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith(IS_PUBLIC_KEY, [
         mockExecutionContext.getHandler(),
         mockExecutionContext.getClass(),
-      ]);
-    });
+      ])
+    })
 
     it('should require authentication for protected endpoints', () => {
-      mockReflector.getAllAndOverride.mockReturnValue(false);
-      
-      // Mock the parent canActivate method
-      const parentCanActivate = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate');
-      parentCanActivate.mockReturnValue(true);
+      mockReflector.getAllAndOverride.mockReturnValue(false)
 
-      const result = guard.canActivate(mockExecutionContext);
+      // Mock the parent canActivate method
+      const parentCanActivate = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate')
+      parentCanActivate.mockReturnValue(true)
+
+      const result = guard.canActivate(mockExecutionContext)
 
       expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith(IS_PUBLIC_KEY, [
         mockExecutionContext.getHandler(),
         mockExecutionContext.getClass(),
-      ]);
-      expect(parentCanActivate).toHaveBeenCalledWith(mockExecutionContext);
-    });
+      ])
+      expect(parentCanActivate).toHaveBeenCalledWith(mockExecutionContext)
+    })
 
     it('should require authentication when no public metadata is set', () => {
-      mockReflector.getAllAndOverride.mockReturnValue(undefined);
-      
-      const parentCanActivate = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate');
-      parentCanActivate.mockReturnValue(true);
+      mockReflector.getAllAndOverride.mockReturnValue(undefined)
 
-      const result = guard.canActivate(mockExecutionContext);
+      const parentCanActivate = jest.spyOn(Object.getPrototypeOf(Object.getPrototypeOf(guard)), 'canActivate')
+      parentCanActivate.mockReturnValue(true)
 
-      expect(parentCanActivate).toHaveBeenCalledWith(mockExecutionContext);
-    });
-  });
+      const result = guard.canActivate(mockExecutionContext)
+
+      expect(parentCanActivate).toHaveBeenCalledWith(mockExecutionContext)
+    })
+  })
 
   describe('handleRequest', () => {
     const mockExecutionContext = {
@@ -97,23 +99,23 @@ describe('JwtAuthGuard', () => {
           ip: '192.168.1.1',
         })),
       })),
-    } as unknown as ExecutionContext;
+    } as unknown as ExecutionContext
 
     it('should return user when authentication succeeds', () => {
-      const mockUser = { id: 'user-123', email: 'test@example.com' };
+      const mockUser = { id: 'user-123', email: 'test@example.com' }
 
-      const result = guard.handleRequest(null, mockUser, null, mockExecutionContext);
+      const result = guard.handleRequest(null, mockUser, null, mockExecutionContext)
 
-      expect(result).toBe(mockUser);
-    });
+      expect(result).toBe(mockUser)
+    })
 
     it('should throw UnauthorizedException when no user is provided', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, null, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, null, mockExecutionContext))
-        .toThrow('Authentication failed');
+        .toThrow('Authentication failed')
 
       expect(consoleWarnSpy).toHaveBeenCalledWith('JWT Authentication failed:', {
         endpoint: 'GET /test',
@@ -121,101 +123,102 @@ describe('JwtAuthGuard', () => {
         userAgent: 'test-agent',
         ip: '192.168.1.1',
         timestamp: expect.any(String),
-      });
+      })
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should throw UnauthorizedException with custom error message', () => {
-      const error = new Error('Custom error message');
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const error = new Error('Custom error message')
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(error, null, null, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(error, null, null, mockExecutionContext))
-        .toThrow('Custom error message');
+        .toThrow('Custom error message')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should handle TokenExpiredError with specific message', () => {
-      const info = { name: 'TokenExpiredError' };
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const info = { name: 'TokenExpiredError' }
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow('Access token has expired');
+        .toThrow('Access token has expired')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should handle JsonWebTokenError with specific message', () => {
-      const info = { name: 'JsonWebTokenError' };
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const info = { name: 'JsonWebTokenError' }
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow('Invalid access token');
+        .toThrow('Invalid access token')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should handle NotBeforeError with specific message', () => {
-      const info = { name: 'NotBeforeError' };
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const info = { name: 'NotBeforeError' }
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow('Access token not active yet');
+        .toThrow('Access token not active yet')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should handle TokenRequiredError with specific message', () => {
-      const info = { name: 'TokenRequiredError' };
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const info = { name: 'TokenRequiredError' }
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow('Access token is required');
+        .toThrow('Access token is required')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should handle AuthTokenMissingError with specific message', () => {
-      const info = { name: 'AuthTokenMissingError' };
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const info = { name: 'AuthTokenMissingError' }
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow('Access token is required');
+        .toThrow('Access token is required')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should use info.message when available', () => {
-      const info = { name: 'CustomError', message: 'Custom info message' };
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const info = { name: 'CustomError', message: 'Custom info message' }
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow(UnauthorizedException);
+        .toThrow(UnauthorizedException)
       expect(() => guard.handleRequest(null, null, info, mockExecutionContext))
-        .toThrow('Custom info message');
+        .toThrow('Custom info message')
 
-      consoleWarnSpy.mockRestore();
-    });
+      consoleWarnSpy.mockRestore()
+    })
 
     it('should log authentication failures with request details', () => {
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
 
       try {
-        guard.handleRequest(null, null, null, mockExecutionContext);
-      } catch (e) {
+        guard.handleRequest(null, null, null, mockExecutionContext)
+      }
+      catch (e) {
         // Expected to throw
       }
 
@@ -225,9 +228,9 @@ describe('JwtAuthGuard', () => {
         userAgent: 'test-agent',
         ip: '192.168.1.1',
         timestamp: expect.any(String),
-      });
+      })
 
-      consoleWarnSpy.mockRestore();
-    });
-  });
-});
+      consoleWarnSpy.mockRestore()
+    })
+  })
+})

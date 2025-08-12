@@ -1,15 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RoleGuard } from './guards/role.guard';
-import { OrgScopeGuard } from './guards/org-scope.guard';
-import { Reflector } from '@nestjs/core';
-import { AuthRepository } from './auth.repo';
+import type { TestingModule } from '@nestjs/testing'
+import { Reflector } from '@nestjs/core'
+import { Test } from '@nestjs/testing'
+import { AuthController } from './auth.controller'
+import { AuthRepository } from './auth.repo'
+import { AuthService } from './auth.service'
+import { JwtAuthGuard } from './guards/jwt-auth.guard'
+import { OrgScopeGuard } from './guards/org-scope.guard'
+import { RoleGuard } from './guards/role.guard'
 
-describe('AuthController', () => {
-  let controller: AuthController;
-  let authService: AuthService;
+describe('authController', () => {
+  let controller: AuthController
+  let authService: AuthService
 
   const mockAuthService = {
     register: jest.fn(),
@@ -19,7 +20,7 @@ describe('AuthController', () => {
     getUserProfile: jest.fn(),
     updateUserProfile: jest.fn(),
     changePassword: jest.fn(),
-  };
+  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -32,38 +33,38 @@ describe('AuthController', () => {
         { provide: OrgScopeGuard, useValue: { canActivate: () => true } },
         { provide: Reflector, useValue: {} },
       ],
-    }).compile();
+    }).compile()
 
-    controller = module.get<AuthController>(AuthController);
-    authService = module.get<AuthService>(AuthService);
-  });
+    controller = module.get<AuthController>(AuthController)
+    authService = module.get<AuthService>(AuthService)
+  })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
+    expect(controller).toBeDefined()
+  })
 
   describe('/me endpoints', () => {
-    const mockUser = { id: 'user-1', role: 'student', orgId: 'org-1' };
+    const mockUser = { id: 'user-1', role: 'student', orgId: 'org-1' }
 
-    it('GET /me should return a user profile', async () => {
-      const profile = { id: 'user-1', fullName: 'Test User' };
-      mockAuthService.getUserProfile.mockResolvedValue(profile);
-      
-      const result = await controller.getProfile(mockUser as any);
-      
-      expect(result).toEqual(profile);
-      expect(authService.getUserProfile).toHaveBeenCalledWith('user-1');
-    });
+    it('gET /me should return a user profile', async () => {
+      const profile = { id: 'user-1', fullName: 'Test User' }
+      mockAuthService.getUserProfile.mockResolvedValue(profile)
 
-    it('PATCH /me should update a user profile', async () => {
-      const profileUpdate = { fullName: 'Updated Name' };
-      const updatedProfile = { id: 'user-1', fullName: 'Updated Name' };
-      mockAuthService.updateUserProfile.mockResolvedValue(updatedProfile);
-      
-      const result = await controller.updateProfile(profileUpdate, mockUser as any);
-      
-      expect(result).toEqual(updatedProfile);
-      expect(authService.updateUserProfile).toHaveBeenCalledWith('user-1', profileUpdate);
-    });
-  });
-});
+      const result = await controller.getProfile(mockUser as any)
+
+      expect(result).toEqual(profile)
+      expect(authService.getUserProfile).toHaveBeenCalledWith('user-1')
+    })
+
+    it('pATCH /me should update a user profile', async () => {
+      const profileUpdate = { fullName: 'Updated Name' }
+      const updatedProfile = { id: 'user-1', fullName: 'Updated Name' }
+      mockAuthService.updateUserProfile.mockResolvedValue(updatedProfile)
+
+      const result = await controller.updateProfile(profileUpdate, mockUser as any)
+
+      expect(result).toEqual(updatedProfile)
+      expect(authService.updateUserProfile).toHaveBeenCalledWith('user-1', profileUpdate)
+    })
+  })
+})

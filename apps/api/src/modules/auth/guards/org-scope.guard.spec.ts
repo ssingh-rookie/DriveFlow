@@ -1,14 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ExecutionContext, ForbiddenException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
-import { OrgScopeGuard, ORG_CONTEXT_KEY } from './org-scope.guard';
-import { AuthRepository } from '../auth.repo';
-import { AuthenticatedUser } from '../strategies/jwt.strategy';
+import type { ExecutionContext } from '@nestjs/common'
+import type { TestingModule } from '@nestjs/testing'
+import type { AuthenticatedUser } from '../strategies/jwt.strategy'
+import { ForbiddenException } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
+import { Test } from '@nestjs/testing'
+import { AuthRepository } from '../auth.repo'
+import { OrgScopeGuard } from './org-scope.guard'
 
-describe('OrgScopeGuard', () => {
-  let guard: OrgScopeGuard;
-  let reflector: Reflector;
-  let authRepo: AuthRepository;
+describe('orgScopeGuard', () => {
+  let guard: OrgScopeGuard
+  let reflector: Reflector
+  let authRepo: AuthRepository
 
   const mockUser: AuthenticatedUser = {
     id: 'user-123',
@@ -17,7 +19,7 @@ describe('OrgScopeGuard', () => {
     orgId: 'org-456',
     jti: 'jwt-123',
     tokenType: 'access',
-  };
+  }
 
   const mockRequest = (orgId?: string) => ({
     user: mockUser,
@@ -26,7 +28,7 @@ describe('OrgScopeGuard', () => {
     params: { orgId },
     headers: { 'user-agent': 'test-agent' },
     ip: '192.168.1.1',
-  });
+  })
 
   const mockExecutionContext = (orgId?: string) => ({
     switchToHttp: jest.fn(() => ({
@@ -34,16 +36,16 @@ describe('OrgScopeGuard', () => {
     })),
     getHandler: jest.fn(),
     getClass: jest.fn(),
-  } as unknown as ExecutionContext);
+  } as unknown as ExecutionContext)
 
   const mockReflector = {
     getAllAndOverride: jest.fn(),
-  };
+  }
 
   const mockAuthRepo = {
     isUserMemberOfOrg: jest.fn(),
     logSecurityEvent: jest.fn(),
-  };
+  }
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -52,75 +54,78 @@ describe('OrgScopeGuard', () => {
         { provide: Reflector, useValue: mockReflector },
         { provide: AuthRepository, useValue: mockAuthRepo },
       ],
-    }).compile();
+    }).compile()
 
-    guard = module.get<OrgScopeGuard>(OrgScopeGuard);
-    reflector = module.get<Reflector>(Reflector);
-    authRepo = module.get<AuthRepository>(AuthRepository);
+    guard = module.get<OrgScopeGuard>(OrgScopeGuard)
+    reflector = module.get<Reflector>(Reflector)
+    authRepo = module.get<AuthRepository>(AuthRepository)
 
-    jest.clearAllMocks();
-  });
+    jest.clearAllMocks()
+  })
 
   it('should be defined', () => {
-    expect(guard).toBeDefined();
-  });
+    expect(guard).toBeDefined()
+  })
 
   it('should allow access if decorator is not present', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(false);
-    const result = await guard.canActivate(mockExecutionContext('org-456'));
-    expect(result).toBe(true);
-  });
+    mockReflector.getAllAndOverride.mockReturnValue(false)
+    const result = await guard.canActivate(mockExecutionContext('org-456'))
+    expect(result).toBe(true)
+  })
 
   it('should allow access for a valid organization member', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(true);
-    mockAuthRepo.isUserMemberOfOrg.mockResolvedValue(true);
-    const result = await guard.canActivate(mockExecutionContext('org-456'));
-    expect(result).toBe(true);
-  });
+    mockReflector.getAllAndOverride.mockReturnValue(true)
+    mockAuthRepo.isUserMemberOfOrg.mockResolvedValue(true)
+    const result = await guard.canActivate(mockExecutionContext('org-456'))
+    expect(result).toBe(true)
+  })
 
   it('should deny access if orgId is missing', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(true);
+    mockReflector.getAllAndOverride.mockReturnValue(true)
     await expect(guard.canActivate(mockExecutionContext(undefined)))
-      .rejects.toThrow(ForbiddenException);
-  });
+      .rejects
+      .toThrow(ForbiddenException)
+  })
 
   it('should deny access if user is not a member of the organization', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(true);
-    mockAuthRepo.isUserMemberOfOrg.mockResolvedValue(false);
+    mockReflector.getAllAndOverride.mockReturnValue(true)
+    mockAuthRepo.isUserMemberOfOrg.mockResolvedValue(false)
     await expect(guard.canActivate(mockExecutionContext('org-789')))
-      .rejects.toThrow(ForbiddenException);
-  });
+      .rejects
+      .toThrow(ForbiddenException)
+  })
 
   it('should deny access if token orgId does not match request orgId', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(true);
-    const userWithMismatchedOrgId = { ...mockUser, orgId: 'org-000' };
-    const request = mockRequest('org-456');
-    request.user = userWithMismatchedOrgId;
+    mockReflector.getAllAndOverride.mockReturnValue(true)
+    const userWithMismatchedOrgId = { ...mockUser, orgId: 'org-000' }
+    const request = mockRequest('org-456')
+    request.user = userWithMismatchedOrgId
     const context = {
       ...mockExecutionContext('org-456'),
       switchToHttp: () => ({ getRequest: () => request }),
-    } as unknown as ExecutionContext;
-    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
-  });
+    } as unknown as ExecutionContext
+    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException)
+  })
 
   it('should deny access for unauthenticated users', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(true);
-    const request = mockRequest('org-456');
-    request.user = undefined as any;
+    mockReflector.getAllAndOverride.mockReturnValue(true)
+    const request = mockRequest('org-456')
+    request.user = undefined as any
     const context = {
       ...mockExecutionContext('org-456'),
       switchToHttp: () => ({ getRequest: () => request }),
-    } as unknown as ExecutionContext;
-    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException);
-  });
+    } as unknown as ExecutionContext
+    await expect(guard.canActivate(context)).rejects.toThrow(ForbiddenException)
+  })
 
   it('should log a security event on access denial', async () => {
-    mockReflector.getAllAndOverride.mockReturnValue(true);
-    mockAuthRepo.isUserMemberOfOrg.mockResolvedValue(false);
-    
+    mockReflector.getAllAndOverride.mockReturnValue(true)
+    mockAuthRepo.isUserMemberOfOrg.mockResolvedValue(false)
+
     await expect(guard.canActivate(mockExecutionContext('org-789')))
-      .rejects.toThrow(ForbiddenException);
-      
-    expect(mockAuthRepo.logSecurityEvent).toHaveBeenCalled();
-  });
-});
+      .rejects
+      .toThrow(ForbiddenException)
+
+    expect(mockAuthRepo.logSecurityEvent).toHaveBeenCalled()
+  })
+})

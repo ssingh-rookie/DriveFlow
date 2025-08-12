@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { AuthRepository } from '../auth.repo';
-import { JwtUtil } from './jwt.util';
+import type { AuthRepository } from '../auth.repo'
+import type { JwtUtil } from './jwt.util'
+import { Injectable, Logger } from '@nestjs/common'
 
 /**
  * Token revocation reason enum for audit logging
@@ -19,45 +19,45 @@ export enum RevocationReason {
  * Blacklist entry interface for tracking revoked tokens
  */
 export interface BlacklistEntry {
-  jti: string;
-  userId: string;
-  tokenType: 'access' | 'refresh';
-  reason: RevocationReason;
-  revokedAt: Date;
-  expiresAt: Date;
-  metadata?: Record<string, any>;
+  jti: string
+  userId: string
+  tokenType: 'access' | 'refresh'
+  reason: RevocationReason
+  revokedAt: Date
+  expiresAt: Date
+  metadata?: Record<string, any>
 }
 
 /**
  * Bulk revocation result interface
  */
 export interface BulkRevocationResult {
-  accessTokensRevoked: number;
-  refreshTokensRevoked: number;
-  totalRevoked: number;
-  errors: string[];
+  accessTokensRevoked: number
+  refreshTokensRevoked: number
+  totalRevoked: number
+  errors: string[]
 }
 
 /**
  * JWT Blacklist and Revocation Utility
  * Manages token revocation and blacklisting for security purposes
- * 
+ *
  * Note: In production, consider using Redis or a dedicated cache for blacklist
  * to improve performance for high-traffic applications
  */
 @Injectable()
 export class JwtBlacklistUtil {
-  private readonly logger = new Logger(JwtBlacklistUtil.name);
+  private readonly logger = new Logger(JwtBlacklistUtil.name)
 
   // In-memory blacklist for access tokens (production should use Redis)
-  private readonly accessTokenBlacklist = new Map<string, BlacklistEntry>();
-  private cleanupInterval?: NodeJS.Timeout;
+  private readonly accessTokenBlacklist = new Map<string, BlacklistEntry>()
+  private cleanupInterval?: NodeJS.Timeout
 
   constructor(
     private readonly authRepo: AuthRepository,
     private readonly jwtUtil: JwtUtil,
   ) {
-    this.startCleanupInterval();
+    this.startCleanupInterval()
   }
 
   /**
@@ -70,21 +70,21 @@ export class JwtBlacklistUtil {
     jti: string,
     reason: RevocationReason,
     metadata: {
-      userId?: string;
-      adminId?: string;
-      ipAddress?: string;
-      userAgent?: string;
+      userId?: string
+      adminId?: string
+      ipAddress?: string
+      userAgent?: string
     } = {},
   ): Promise<void> {
     try {
       // Determine token expiry (we don't need to verify signature for blacklisting)
-      let expiresAt = new Date(Date.now() + 15 * 60 * 1000); // Default 15 minutes
-      let userId = metadata.userId;
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // Default 15 minutes
+      const userId = metadata.userId
 
       // Try to extract more info from the JTI if available
       if (!userId) {
         // In a real implementation, you might store JTI->userId mapping
-        this.logger.warn(`Revoking access token without userId: ${jti}`);
+        this.logger.warn(`Revoking access token without userId: ${jti}`)
       }
 
       const entry: BlacklistEntry = {
@@ -95,10 +95,10 @@ export class JwtBlacklistUtil {
         revokedAt: new Date(),
         expiresAt,
         metadata,
-      };
+      }
 
       // Add to in-memory blacklist
-      this.accessTokenBlacklist.set(jti, entry);
+      this.accessTokenBlacklist.set(jti, entry)
 
       // Log revocation event
       await this.authRepo.logSecurityEvent({
@@ -113,12 +113,13 @@ export class JwtBlacklistUtil {
         },
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent,
-      });
+      })
 
-      this.logger.log(`Access token revoked: ${jti} (reason: ${reason})`);
-    } catch (error) {
-      this.logger.error(`Failed to revoke access token ${jti}:`, error);
-      throw error;
+      this.logger.log(`Access token revoked: ${jti} (reason: ${reason})`)
+    }
+    catch (error) {
+      this.logger.error(`Failed to revoke access token ${jti}:`, error)
+      throw error
     }
   }
 
@@ -132,15 +133,15 @@ export class JwtBlacklistUtil {
     jti: string,
     reason: RevocationReason,
     metadata: {
-      userId?: string;
-      adminId?: string;
-      ipAddress?: string;
-      userAgent?: string;
+      userId?: string
+      adminId?: string
+      ipAddress?: string
+      userAgent?: string
     } = {},
   ): Promise<void> {
     try {
       // For refresh tokens, mark as used in database
-      await this.authRepo.markRefreshTokenAsUsed(jti);
+      await this.authRepo.markRefreshTokenAsUsed(jti)
 
       // Log revocation event
       await this.authRepo.logSecurityEvent({
@@ -155,12 +156,13 @@ export class JwtBlacklistUtil {
         },
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent,
-      });
+      })
 
-      this.logger.log(`Refresh token revoked: ${jti} (reason: ${reason})`);
-    } catch (error) {
-      this.logger.error(`Failed to revoke refresh token ${jti}:`, error);
-      throw error;
+      this.logger.log(`Refresh token revoked: ${jti} (reason: ${reason})`)
+    }
+    catch (error) {
+      this.logger.error(`Failed to revoke refresh token ${jti}:`, error)
+      throw error
     }
   }
 
@@ -174,9 +176,9 @@ export class JwtBlacklistUtil {
     userId: string,
     reason: RevocationReason,
     metadata: {
-      adminId?: string;
-      ipAddress?: string;
-      userAgent?: string;
+      adminId?: string
+      ipAddress?: string
+      userAgent?: string
     } = {},
   ): Promise<BulkRevocationResult> {
     const result: BulkRevocationResult = {
@@ -184,15 +186,15 @@ export class JwtBlacklistUtil {
       refreshTokensRevoked: 0,
       totalRevoked: 0,
       errors: [],
-    };
+    }
 
     try {
       // Revoke all refresh tokens in database
-      await this.authRepo.revokeAllUserRefreshTokens(userId);
-      
+      await this.authRepo.revokeAllUserRefreshTokens(userId)
+
       // Get count of revoked refresh tokens (for reporting)
-      const refreshTokenStats = await this.authRepo.getRefreshTokenStats();
-      result.refreshTokensRevoked = refreshTokenStats.used;
+      const refreshTokenStats = await this.authRepo.getRefreshTokenStats()
+      result.refreshTokensRevoked = refreshTokenStats.used
 
       // For access tokens, we need to add all active user tokens to blacklist
       // In a real implementation, you'd query a token store or have JTI tracking
@@ -205,12 +207,12 @@ export class JwtBlacklistUtil {
         revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
         metadata: { bulkRevocation: true, ...metadata },
-      };
+      }
 
-      this.accessTokenBlacklist.set(`user_${userId}`, userRevocationEntry);
-      result.accessTokensRevoked = 1; // Placeholder
+      this.accessTokenBlacklist.set(`user_${userId}`, userRevocationEntry)
+      result.accessTokensRevoked = 1 // Placeholder
 
-      result.totalRevoked = result.accessTokensRevoked + result.refreshTokensRevoked;
+      result.totalRevoked = result.accessTokensRevoked + result.refreshTokensRevoked
 
       // Log bulk revocation event
       await this.authRepo.logSecurityEvent({
@@ -227,14 +229,15 @@ export class JwtBlacklistUtil {
         },
         ipAddress: metadata.ipAddress,
         userAgent: metadata.userAgent,
-      });
+      })
 
-      this.logger.log(`Bulk revocation completed for user ${userId}: ${result.totalRevoked} tokens revoked`);
-      return result;
-    } catch (error) {
-      result.errors.push(error.message);
-      this.logger.error(`Failed to revoke user tokens for ${userId}:`, error);
-      throw error;
+      this.logger.log(`Bulk revocation completed for user ${userId}: ${result.totalRevoked} tokens revoked`)
+      return result
+    }
+    catch (error) {
+      result.errors.push(error.message)
+      this.logger.error(`Failed to revoke user tokens for ${userId}:`, error)
+      throw error
     }
   }
 
@@ -247,29 +250,31 @@ export class JwtBlacklistUtil {
   isAccessTokenBlacklisted(jti: string, userId?: string): boolean {
     // Check specific token blacklist
     if (this.accessTokenBlacklist.has(jti)) {
-      const entry = this.accessTokenBlacklist.get(jti)!;
-      
+      const entry = this.accessTokenBlacklist.get(jti)!
+
       // Check if blacklist entry is still valid (not expired)
       if (entry.expiresAt > new Date()) {
-        return true;
-      } else {
+        return true
+      }
+      else {
         // Clean up expired entry
-        this.accessTokenBlacklist.delete(jti);
+        this.accessTokenBlacklist.delete(jti)
       }
     }
 
     // Check user-level revocation if userId provided
     if (userId && this.accessTokenBlacklist.has(`user_${userId}`)) {
-      const entry = this.accessTokenBlacklist.get(`user_${userId}`)!;
-      
+      const entry = this.accessTokenBlacklist.get(`user_${userId}`)!
+
       if (entry.expiresAt > new Date()) {
-        return true;
-      } else {
-        this.accessTokenBlacklist.delete(`user_${userId}`);
+        return true
+      }
+      else {
+        this.accessTokenBlacklist.delete(`user_${userId}`)
       }
     }
 
-    return false;
+    return false
   }
 
   /**
@@ -279,11 +284,12 @@ export class JwtBlacklistUtil {
    */
   async isRefreshTokenRevoked(jti: string): Promise<boolean> {
     try {
-      const token = await this.authRepo.findRefreshTokenByJti(jti);
-      return !token || token.used || token.expiresAt < new Date();
-    } catch (error) {
-      this.logger.error(`Error checking refresh token revocation for ${jti}:`, error);
-      return true; // Assume revoked on error for security
+      const token = await this.authRepo.findRefreshTokenByJti(jti)
+      return !token || token.used || token.expiresAt < new Date()
+    }
+    catch (error) {
+      this.logger.error(`Error checking refresh token revocation for ${jti}:`, error)
+      return true // Assume revoked on error for security
     }
   }
 
@@ -291,49 +297,49 @@ export class JwtBlacklistUtil {
    * Get blacklist statistics for monitoring
    */
   getBlacklistStats(): {
-    activeAccessTokenEntries: number;
-    totalAccessTokenEntries: number;
-    oldestEntry: Date | null;
-    newestEntry: Date | null;
+    activeAccessTokenEntries: number
+    totalAccessTokenEntries: number
+    oldestEntry: Date | null
+    newestEntry: Date | null
   } {
-    const entries = Array.from(this.accessTokenBlacklist.values());
-    const activeEntries = entries.filter(entry => entry.expiresAt > new Date());
+    const entries = Array.from(this.accessTokenBlacklist.values())
+    const activeEntries = entries.filter(entry => entry.expiresAt > new Date())
 
     return {
       activeAccessTokenEntries: activeEntries.length,
       totalAccessTokenEntries: entries.length,
       oldestEntry: entries.length > 0 ? new Date(Math.min(...entries.map(e => e.revokedAt.getTime()))) : null,
       newestEntry: entries.length > 0 ? new Date(Math.max(...entries.map(e => e.revokedAt.getTime()))) : null,
-    };
+    }
   }
 
   /**
    * Cleanup expired blacklist entries
    */
   cleanupExpiredEntries(): number {
-    const now = new Date();
-    let cleaned = 0;
+    const now = new Date()
+    let cleaned = 0
 
     for (const [key, entry] of this.accessTokenBlacklist.entries()) {
       if (entry.expiresAt <= now) {
-        this.accessTokenBlacklist.delete(key);
-        cleaned++;
+        this.accessTokenBlacklist.delete(key)
+        cleaned++
       }
     }
 
     if (cleaned > 0) {
-      this.logger.debug(`Cleaned up ${cleaned} expired blacklist entries`);
+      this.logger.debug(`Cleaned up ${cleaned} expired blacklist entries`)
     }
 
-    return cleaned;
+    return cleaned
   }
 
   /**
    * Emergency: Clear all blacklist entries (admin function)
    */
   clearBlacklist(adminId: string, reason: string): void {
-    const entriesCount = this.accessTokenBlacklist.size;
-    this.accessTokenBlacklist.clear();
+    const entriesCount = this.accessTokenBlacklist.size
+    this.accessTokenBlacklist.clear()
 
     this.authRepo.logSecurityEvent({
       event: 'blacklist_cleared',
@@ -343,9 +349,9 @@ export class JwtBlacklistUtil {
         reason,
         entriesCleared: entriesCount,
       },
-    });
+    })
 
-    this.logger.warn(`Blacklist cleared by admin ${adminId}: ${entriesCount} entries removed (reason: ${reason})`);
+    this.logger.warn(`Blacklist cleared by admin ${adminId}: ${entriesCount} entries removed (reason: ${reason})`)
   }
 
   /**
@@ -354,23 +360,25 @@ export class JwtBlacklistUtil {
    * @returns Safe token information or null
    */
   extractTokenInfoForRevocation(token: string): {
-    jti: string | null;
-    userId: string | null;
-    type: string | null;
-    expiresAt: Date | null;
+    jti: string | null
+    userId: string | null
+    type: string | null
+    expiresAt: Date | null
   } | null {
     try {
-      const decoded = this.jwtUtil.decodeToken(token);
-      if (!decoded) return null;
+      const decoded = this.jwtUtil.decodeToken(token)
+      if (!decoded)
+        return null
 
       return {
         jti: decoded.jti || null,
         userId: decoded.sub || null,
         type: decoded.type || null,
         expiresAt: this.jwtUtil.getTokenExpiry(token),
-      };
-    } catch {
-      return null;
+      }
+    }
+    catch {
+      return null
     }
   }
 
@@ -381,19 +389,19 @@ export class JwtBlacklistUtil {
     switch (reason) {
       case RevocationReason.SECURITY_BREACH:
       case RevocationReason.TOKEN_COMPROMISE:
-        return 'critical';
-      
+        return 'critical'
+
       case RevocationReason.SUSPICIOUS_ACTIVITY:
       case RevocationReason.ADMIN_ACTION:
-        return 'high';
-      
+        return 'high'
+
       case RevocationReason.PASSWORD_CHANGE:
       case RevocationReason.ACCOUNT_DEACTIVATION:
-        return 'medium';
-      
+        return 'medium'
+
       case RevocationReason.USER_LOGOUT:
       default:
-        return 'low';
+        return 'low'
     }
   }
 
@@ -403,10 +411,10 @@ export class JwtBlacklistUtil {
   private startCleanupInterval(): void {
     // Clean up every 30 minutes
     this.cleanupInterval = setInterval(() => {
-      this.cleanupExpiredEntries();
-    }, 30 * 60 * 1000);
+      this.cleanupExpiredEntries()
+    }, 30 * 60 * 1000)
 
-    this.logger.log('JWT blacklist cleanup interval started (30 minutes)');
+    this.logger.log('JWT blacklist cleanup interval started (30 minutes)')
   }
 
   /**
@@ -414,9 +422,9 @@ export class JwtBlacklistUtil {
    */
   stopCleanupInterval(): void {
     if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-      this.cleanupInterval = undefined;
-      this.logger.log('JWT blacklist cleanup interval stopped');
+      clearInterval(this.cleanupInterval)
+      this.cleanupInterval = undefined
+      this.logger.log('JWT blacklist cleanup interval stopped')
     }
   }
 }

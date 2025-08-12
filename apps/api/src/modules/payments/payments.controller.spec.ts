@@ -1,22 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PaymentsController } from './payments.controller';
-import { PaymentsService } from './payments.service';
-import { RoleGuard } from '../auth/guards/role.guard';
-import { OrgScopeGuard } from '../auth/guards/org-scope.guard';
-import { JwtPayload } from '../auth/types/auth.types';
+import type { TestingModule } from '@nestjs/testing'
+import type { JwtPayload } from '../auth/types/auth.types'
+import { Test } from '@nestjs/testing'
+import { OrgScopeGuard } from '../auth/guards/org-scope.guard'
+import { RoleGuard } from '../auth/guards/role.guard'
+import { PaymentsController } from './payments.controller'
+import { PaymentsService } from './payments.service'
 // import { StripeWebhookHandler } from './webhooks/stripe.webhook';
 // import { RawBodyRequest } from '@nestjs/common';
 // import { Request, Response } from 'express';
 
-describe('PaymentsController', () => {
-  let controller: PaymentsController;
-  let service: PaymentsService;
+describe('paymentsController', () => {
+  let controller: PaymentsController
+  let service: PaymentsService
   // let webhookHandler: StripeWebhookHandler;
 
   const mockPaymentsService = {
     ensureExpressAccountAndLink: jest.fn(),
     getStripeAccountStatus: jest.fn(),
-  };
+  }
 
   // const mockWebhookHandler = {
   //   handleStripeWebhook: jest.fn(),
@@ -40,20 +41,20 @@ describe('PaymentsController', () => {
       .useValue({ canActivate: () => true })
       .overrideGuard(OrgScopeGuard)
       .useValue({ canActivate: () => true })
-      .compile();
+      .compile()
 
-    controller = module.get<PaymentsController>(PaymentsController);
-    service = module.get<PaymentsService>(PaymentsService);
+    controller = module.get<PaymentsController>(PaymentsController)
+    service = module.get<PaymentsService>(PaymentsService)
     // webhookHandler = module.get<StripeWebhookHandler>(StripeWebhookHandler);
-  });
+  })
 
   it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
+    expect(controller).toBeDefined()
+  })
 
   describe('getConnectLink', () => {
     it('should call the service and return an onboarding link', async () => {
-      const instructorId = 'test-instructor-id';
+      const instructorId = 'test-instructor-id'
       const user: JwtPayload = {
         sub: '1',
         email: 'test@test.com',
@@ -62,25 +63,25 @@ describe('PaymentsController', () => {
         iat: 0,
         exp: 0,
         jti: 'a',
-      };
-      const expectedLink = 'https://stripe.com/onboard/123';
+      }
+      const expectedLink = 'https://stripe.com/onboard/123'
       mockPaymentsService.ensureExpressAccountAndLink.mockResolvedValue({
         onboardingLink: expectedLink,
-      });
+      })
 
-      const result = await controller.getConnectLink(instructorId);
+      const result = await controller.getConnectLink(instructorId)
 
       expect(service.ensureExpressAccountAndLink).toHaveBeenCalledWith(
         instructorId,
         1, // hardcoded orgId for testing
-      );
-      expect(result).toEqual({ onboardingLink: expectedLink });
-    });
-  });
+      )
+      expect(result).toEqual({ onboardingLink: expectedLink })
+    })
+  })
 
   describe('getPayoutReadiness', () => {
     it('should call the service and return the payout readiness status', async () => {
-      const instructorId = 'test-instructor-id';
+      const instructorId = 'test-instructor-id'
       const user: JwtPayload = {
         sub: '1',
         email: 'test@test.com',
@@ -89,21 +90,21 @@ describe('PaymentsController', () => {
         iat: 0,
         exp: 0,
         jti: 'a',
-      };
-      const expectedStatus = { status: 'Complete', requirements: [] };
+      }
+      const expectedStatus = { status: 'Complete', requirements: [] }
       mockPaymentsService.getStripeAccountStatus.mockResolvedValue(
         expectedStatus,
-      );
+      )
 
-      const result = await controller.getPayoutReadiness(instructorId);
+      const result = await controller.getPayoutReadiness(instructorId)
 
       expect(service.getStripeAccountStatus).toHaveBeenCalledWith(
         instructorId,
         1, // hardcoded orgId for testing
-      );
-      expect(result).toEqual(expectedStatus);
-    });
-  });
+      )
+      expect(result).toEqual(expectedStatus)
+    })
+  })
 
   // TODO: Add webhook test when webhook endpoint is implemented
   // describe('handleStripeWebhook', () => {
@@ -121,4 +122,4 @@ describe('PaymentsController', () => {
   //     expect(mockRes.send).toHaveBeenCalled();
   //   });
   // });
-});
+})

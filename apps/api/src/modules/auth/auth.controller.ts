@@ -1,38 +1,39 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Body,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-  Request,
-  UnauthorizedException,
-  BadRequestException
-} from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-
-import {
+import type {
+  ChangePasswordDto,
   LoginDto,
   RefreshTokenDto,
-  LogoutDto,
+  RegisterDto,
+  UpdateUserProfileDto,
+} from '@driveflow/contracts'
+import type { AuthService } from './auth.service'
+import type { AuthenticatedUser } from './strategies/jwt.strategy'
+
+import {
+  AuthErrorDto,
   AuthResponseDto,
   RefreshResponseDto,
   UserProfileDto,
-  UpdateUserProfileDto,
-  ChangePasswordDto,
-  AuthErrorDto,
-  RegisterDto,
-} from '@driveflow/contracts';
+} from '@driveflow/contracts'
 
-import { AuthService } from './auth.service';
-import { JwtAuthGuard, Public } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
-import { AuthenticatedUser } from './strategies/jwt.strategy';
-import { RoleGuard } from './guards/role.guard';
-import { OrgScopeGuard } from './guards/org-scope.guard';
-import { Permissions } from './decorators/roles.decorator';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Request,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common'
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger'
+import { CurrentUser } from './decorators/current-user.decorator'
+import { Permissions } from './decorators/roles.decorator'
+import { JwtAuthGuard, Public } from './guards/jwt-auth.guard'
+import { OrgScopeGuard } from './guards/org-scope.guard'
+import { RoleGuard } from './guards/role.guard'
 
 @ApiTags('Authentication')
 @Controller('v1/auth')
@@ -55,9 +56,10 @@ export class AuthController {
   })
   async register(@Body() registerDto: RegisterDto): Promise<AuthResponseDto> {
     try {
-      return await this.authService.register(registerDto);
-    } catch (error) {
-      throw new BadRequestException(error.message);
+      return await this.authService.register(registerDto)
+    }
+    catch (error) {
+      throw new BadRequestException(error.message)
     }
   }
 
@@ -68,18 +70,19 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Login successful',
-    type: () => AuthResponseDto
+    type: () => AuthResponseDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Invalid credentials',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     try {
-      return await this.authService.login(loginDto);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid credentials');
+      return await this.authService.login(loginDto)
+    }
+    catch (error) {
+      throw new UnauthorizedException('Invalid credentials')
     }
   }
 
@@ -90,18 +93,19 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Token refreshed successfully',
-    type: () => RefreshResponseDto
+    type: () => RefreshResponseDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Invalid refresh token',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   async refreshToken(@Body() refreshDto: RefreshTokenDto): Promise<RefreshResponseDto> {
     try {
-      return await this.authService.refreshToken(refreshDto.refreshToken);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
+      return await this.authService.refreshToken(refreshDto.refreshToken)
+    }
+    catch (error) {
+      throw new UnauthorizedException('Invalid refresh token')
     }
   }
 
@@ -112,19 +116,19 @@ export class AuthController {
   @ApiOperation({ summary: 'User logout' })
   @ApiResponse({
     status: 204,
-    description: 'Logout successful'
+    description: 'Logout successful',
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   async logout(
     @Request() request: any,
-    @CurrentUser() user: AuthenticatedUser
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<void> {
-    const refreshToken = this.extractRefreshTokenFromBody(request.body);
-    await this.authService.logout(refreshToken, user);
+    const refreshToken = this.extractRefreshTokenFromBody(request.body)
+    await this.authService.logout(refreshToken, user)
   }
 
   @Get('me')
@@ -135,15 +139,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'User profile retrieved successfully',
-    type: () => UserProfileDto
+    type: () => UserProfileDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   async getProfile(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileDto> {
-    return await this.authService.getUserProfile(user.id);
+    return await this.authService.getUserProfile(user.id)
   }
 
   @Patch('me')
@@ -154,26 +158,27 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: 'Profile updated successfully',
-    type: () => UserProfileDto
+    type: () => UserProfileDto,
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid request',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   async updateProfile(
     @Body() updateDto: UpdateUserProfileDto,
-    @CurrentUser() user: AuthenticatedUser
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<UserProfileDto> {
     try {
-      return await this.authService.updateUserProfile(user.id, updateDto);
-    } catch (error) {
-      throw new BadRequestException('Invalid profile data');
+      return await this.authService.updateUserProfile(user.id, updateDto)
+    }
+    catch (error) {
+      throw new BadRequestException('Invalid profile data')
     }
   }
 
@@ -183,39 +188,40 @@ export class AuthController {
   @ApiOperation({ summary: 'Change user password' })
   @ApiResponse({
     status: 200,
-    description: 'Password changed successfully'
+    description: 'Password changed successfully',
   })
   @ApiResponse({
     status: 400,
     description: 'Invalid password data',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized',
-    type: () => AuthErrorDto
+    type: () => AuthErrorDto,
   })
   async changePassword(
     @Body() changePasswordDto: ChangePasswordDto,
-    @CurrentUser() user: AuthenticatedUser
+    @CurrentUser() user: AuthenticatedUser,
   ): Promise<{ message: string }> {
     try {
       await this.authService.changePassword(
         user.id,
         changePasswordDto.currentPassword,
-        changePasswordDto.newPassword
-      );
-      return { message: 'Password changed successfully' };
-    } catch (error) {
-      throw new BadRequestException('Invalid password data');
+        changePasswordDto.newPassword,
+      )
+      return { message: 'Password changed successfully' }
+    }
+    catch (error) {
+      throw new BadRequestException('Invalid password data')
     }
   }
 
   private extractRefreshTokenFromBody(body: any): string {
-    const refreshToken = body.refreshToken;
+    const refreshToken = body.refreshToken
     if (!refreshToken) {
-      throw new BadRequestException('Refresh token is required');
+      throw new BadRequestException('Refresh token is required')
     }
-    return refreshToken;
+    return refreshToken
   }
 }

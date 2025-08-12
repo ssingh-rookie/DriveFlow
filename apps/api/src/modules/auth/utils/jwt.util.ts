@@ -1,19 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import * as jwt from 'jsonwebtoken';
-import { EnvConfigService } from '../../../core/config/env.config';
+import type { EnvConfigService } from '../../../core/config/env.config'
+import { Injectable } from '@nestjs/common'
+import * as jwt from 'jsonwebtoken'
 
 /**
  * JWT token payload interface based on the PRD requirements
  */
 export interface JwtPayload {
-  sub: string;           // User ID
-  role: string;          // OrgRole: owner, admin, instructor, student
-  orgId?: string;        // Organization ID for multi-tenancy
-  iat: number;           // Issued at timestamp
-  exp: number;           // Expiry timestamp
-  jti?: string;          // JWT ID for token tracking
-  type: 'access' | 'refresh';  // Token type
-  rotationId?: string;   // For refresh token rotation tracking
+  sub: string // User ID
+  role: string // OrgRole: owner, admin, instructor, student
+  orgId?: string // Organization ID for multi-tenancy
+  iat: number // Issued at timestamp
+  exp: number // Expiry timestamp
+  jti?: string // JWT ID for token tracking
+  type: 'access' | 'refresh' // Token type
+  rotationId?: string // For refresh token rotation tracking
 }
 
 /**
@@ -30,11 +30,11 @@ export class JwtUtil {
    * @returns Signed JWT access token
    */
   generateAccessToken(payload: {
-    userId: string;
-    role: string;
-    orgId?: string;
+    userId: string
+    role: string
+    orgId?: string
   }): string {
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000)
     const jwtPayload: JwtPayload = {
       sub: payload.userId,
       role: payload.role,
@@ -43,11 +43,11 @@ export class JwtUtil {
       exp: now + this.parseTimeToSeconds(this.envConfig.jwtAccessTokenExpiry),
       type: 'access',
       jti: this.generateJwtId(),
-    };
+    }
 
     return jwt.sign(jwtPayload, this.envConfig.jwtSecret, {
       algorithm: 'HS256',
-    });
+    })
   }
 
   /**
@@ -56,12 +56,12 @@ export class JwtUtil {
    * @returns Signed JWT refresh token
    */
   generateRefreshToken(payload: {
-    userId: string;
-    role: string;
-    orgId?: string;
-    rotationId: string;
+    userId: string
+    role: string
+    orgId?: string
+    rotationId: string
   }): string {
-    const now = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000)
     const jwtPayload: JwtPayload = {
       sub: payload.userId,
       role: payload.role,
@@ -71,11 +71,11 @@ export class JwtUtil {
       type: 'refresh',
       jti: this.generateJwtId(),
       rotationId: payload.rotationId,
-    };
+    }
 
     return jwt.sign(jwtPayload, this.envConfig.jwtSecret, {
       algorithm: 'HS256',
-    });
+    })
   }
 
   /**
@@ -88,23 +88,24 @@ export class JwtUtil {
     try {
       const decoded = jwt.verify(token, this.envConfig.jwtSecret, {
         algorithms: ['HS256'],
-      }) as JwtPayload;
+      }) as JwtPayload
 
       // Validate token structure
-      this.validateTokenPayload(decoded);
+      this.validateTokenPayload(decoded)
 
-      return decoded;
-    } catch (error) {
+      return decoded
+    }
+    catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new Error('Token has expired');
+        throw new TypeError('Token has expired')
       }
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new Error(`Invalid token: ${error.message}`);
+        throw new TypeError(`Invalid token: ${error.message}`)
       }
       if (error instanceof jwt.NotBeforeError) {
-        throw new Error('Token not active yet');
+        throw new TypeError('Token not active yet')
       }
-      throw new Error(`Token verification failed: ${error.message}`);
+      throw new Error(`Token verification failed: ${error.message}`)
     }
   }
 
@@ -116,13 +117,14 @@ export class JwtUtil {
    */
   decodeToken(token: string): JwtPayload | null {
     try {
-      const decoded = jwt.decode(token) as JwtPayload;
+      const decoded = jwt.decode(token) as JwtPayload
       if (!decoded) {
-        throw new Error('Token is null or malformed');
+        throw new Error('Token is null or malformed')
       }
-      return decoded;
-    } catch (error) {
-      throw new Error(`Failed to decode token: ${error.message}`);
+      return decoded
+    }
+    catch (error) {
+      throw new Error(`Failed to decode token: ${error.message}`)
     }
   }
 
@@ -133,15 +135,16 @@ export class JwtUtil {
    */
   isTokenExpired(token: string): boolean {
     try {
-      const decoded = this.decodeToken(token);
+      const decoded = this.decodeToken(token)
       if (!decoded || !decoded.exp) {
-        return true;
+        return true
       }
-      
-      const now = Math.floor(Date.now() / 1000);
-      return decoded.exp < now;
-    } catch {
-      return true; // If we can't decode, consider it expired
+
+      const now = Math.floor(Date.now() / 1000)
+      return decoded.exp < now
+    }
+    catch {
+      return true // If we can't decode, consider it expired
     }
   }
 
@@ -152,13 +155,14 @@ export class JwtUtil {
    */
   getTokenExpiry(token: string): Date | null {
     try {
-      const decoded = this.decodeToken(token);
+      const decoded = this.decodeToken(token)
       if (!decoded || !decoded.exp) {
-        return null;
+        return null
       }
-      return new Date(decoded.exp * 1000);
-    } catch {
-      return null;
+      return new Date(decoded.exp * 1000)
+    }
+    catch {
+      return null
     }
   }
 
@@ -169,10 +173,11 @@ export class JwtUtil {
    */
   extractUserId(token: string): string | null {
     try {
-      const decoded = this.decodeToken(token);
-      return decoded?.sub || null;
-    } catch {
-      return null;
+      const decoded = this.decodeToken(token)
+      return decoded?.sub || null
+    }
+    catch {
+      return null
     }
   }
 
@@ -183,10 +188,11 @@ export class JwtUtil {
    */
   extractJti(token: string): string | null {
     try {
-      const decoded = this.decodeToken(token);
-      return decoded?.jti || null;
-    } catch {
-      return null;
+      const decoded = this.decodeToken(token)
+      return decoded?.jti || null
+    }
+    catch {
+      return null
     }
   }
 
@@ -195,7 +201,7 @@ export class JwtUtil {
    * @returns Unique JTI string
    */
   generateJwtId(): string {
-    return `jwt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `jwt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 
   /**
@@ -203,7 +209,7 @@ export class JwtUtil {
    * @returns Unique rotation ID string
    */
   generateRotationId(): string {
-    return `rot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `rot_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   }
 
   /**
@@ -212,8 +218,8 @@ export class JwtUtil {
    * @returns SHA-256 hash of the token
    */
   hashToken(token: string): string {
-    const crypto = require('crypto');
-    return crypto.createHash('sha256').update(token).digest('hex');
+    const crypto = require('node:crypto')
+    return crypto.createHash('sha256').update(token).digest('hex')
   }
 
   /**
@@ -223,33 +229,33 @@ export class JwtUtil {
    */
   private validateTokenPayload(payload: any): asserts payload is JwtPayload {
     if (!payload || typeof payload !== 'object') {
-      throw new Error('Invalid token payload structure');
+      throw new Error('Invalid token payload structure')
     }
 
     if (!payload.sub || typeof payload.sub !== 'string') {
-      throw new Error('Token missing valid subject (sub) claim');
+      throw new Error('Token missing valid subject (sub) claim')
     }
 
     if (!payload.role || typeof payload.role !== 'string') {
-      throw new Error('Token missing valid role claim');
+      throw new Error('Token missing valid role claim')
     }
 
     if (!payload.type || !['access', 'refresh'].includes(payload.type)) {
-      throw new Error('Token missing valid type claim');
+      throw new Error('Token missing valid type claim')
     }
 
     if (!payload.iat || typeof payload.iat !== 'number') {
-      throw new Error('Token missing valid issued at (iat) claim');
+      throw new Error('Token missing valid issued at (iat) claim')
     }
 
     if (!payload.exp || typeof payload.exp !== 'number') {
-      throw new Error('Token missing valid expiry (exp) claim');
+      throw new Error('Token missing valid expiry (exp) claim')
     }
 
     // Validate refresh token specific claims
     if (payload.type === 'refresh') {
       if (!payload.rotationId || typeof payload.rotationId !== 'string') {
-        throw new Error('Refresh token missing valid rotation ID');
+        throw new Error('Refresh token missing valid rotation ID')
       }
     }
   }
@@ -260,21 +266,21 @@ export class JwtUtil {
    * @returns Time in seconds
    */
   private parseTimeToSeconds(timeStr: string): number {
-    const match = timeStr.match(/^(\d+)([smhd])$/);
+    const match = timeStr.match(/^(\d+)([smhd])$/)
     if (!match) {
-      throw new Error(`Invalid time format: ${timeStr}`);
+      throw new Error(`Invalid time format: ${timeStr}`)
     }
 
-    const value = parseInt(match[1], 10);
-    const unit = match[2];
+    const value = Number.parseInt(match[1], 10)
+    const unit = match[2]
 
     switch (unit) {
-      case 's': return value;
-      case 'm': return value * 60;
-      case 'h': return value * 60 * 60;
-      case 'd': return value * 60 * 60 * 24;
+      case 's': return value
+      case 'm': return value * 60
+      case 'h': return value * 60 * 60
+      case 'd': return value * 60 * 60 * 24
       default:
-        throw new Error(`Unsupported time unit: ${unit}`);
+        throw new Error(`Unsupported time unit: ${unit}`)
     }
   }
 
@@ -285,16 +291,17 @@ export class JwtUtil {
    */
   getTimeUntilExpiry(token: string): number {
     try {
-      const decoded = this.decodeToken(token);
+      const decoded = this.decodeToken(token)
       if (!decoded || !decoded.exp) {
-        return 0;
+        return 0
       }
-      
-      const now = Math.floor(Date.now() / 1000);
-      const remaining = decoded.exp - now;
-      return Math.max(0, remaining);
-    } catch {
-      return 0;
+
+      const now = Math.floor(Date.now() / 1000)
+      const remaining = decoded.exp - now
+      return Math.max(0, remaining)
+    }
+    catch {
+      return 0
     }
   }
 
@@ -305,7 +312,7 @@ export class JwtUtil {
    * @returns true if token expires within the timeframe
    */
   willExpireWithin(token: string, withinSeconds: number): boolean {
-    const timeUntilExpiry = this.getTimeUntilExpiry(token);
-    return timeUntilExpiry > 0 && timeUntilExpiry <= withinSeconds;
+    const timeUntilExpiry = this.getTimeUntilExpiry(token)
+    return timeUntilExpiry > 0 && timeUntilExpiry <= withinSeconds
   }
 }

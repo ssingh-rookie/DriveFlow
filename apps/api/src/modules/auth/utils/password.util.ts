@@ -1,4 +1,4 @@
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcrypt'
 
 /**
  * Password utility functions for secure hashing and verification
@@ -6,7 +6,7 @@ import * as bcrypt from 'bcrypt';
  */
 export class PasswordUtil {
   // Cost factor 10 provides good security while maintaining reasonable performance
-  private static readonly SALT_ROUNDS = 10;
+  private static readonly SALT_ROUNDS = 10
 
   /**
    * Hash a plain text password using bcrypt
@@ -17,14 +17,15 @@ export class PasswordUtil {
   static async hashPassword(plainPassword: string): Promise<string> {
     try {
       if (!plainPassword || plainPassword.trim() === '') {
-        throw new Error('Password cannot be empty');
+        throw new Error('Password cannot be empty')
       }
 
       // Generate salt and hash the password
-      const hashedPassword = await bcrypt.hash(plainPassword, this.SALT_ROUNDS);
-      return hashedPassword;
-    } catch (error) {
-      throw new Error(`Failed to hash password: ${error.message}`);
+      const hashedPassword = await bcrypt.hash(plainPassword, this.SALT_ROUNDS)
+      return hashedPassword
+    }
+    catch (error) {
+      throw new Error(`Failed to hash password: ${error.message}`)
     }
   }
 
@@ -41,14 +42,15 @@ export class PasswordUtil {
   ): Promise<boolean> {
     try {
       if (!plainPassword || !hashedPassword) {
-        return false;
+        return false
       }
 
       // Compare the plain password with the hashed password
-      const isMatch = await bcrypt.compare(plainPassword, hashedPassword);
-      return isMatch;
-    } catch (error) {
-      throw new Error(`Failed to verify password: ${error.message}`);
+      const isMatch = await bcrypt.compare(plainPassword, hashedPassword)
+      return isMatch
+    }
+    catch (error) {
+      throw new Error(`Failed to verify password: ${error.message}`)
     }
   }
 
@@ -60,11 +62,12 @@ export class PasswordUtil {
   static needsRehashing(hashedPassword: string): boolean {
     try {
       // Extract the cost factor from the hashed password
-      const costFactor = bcrypt.getRounds(hashedPassword);
-      return costFactor !== this.SALT_ROUNDS;
-    } catch (error) {
+      const costFactor = bcrypt.getRounds(hashedPassword)
+      return costFactor !== this.SALT_ROUNDS
+    }
+    catch (error) {
       // If we can't determine the cost factor, assume it needs rehashing
-      return true;
+      return true
     }
   }
 
@@ -74,15 +77,15 @@ export class PasswordUtil {
    * @returns A random password string
    */
   static generateRandomPassword(length: number = 12): string {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-    let password = '';
-    
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+    let password = ''
+
     for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * charset.length);
-      password += charset[randomIndex];
+      const randomIndex = Math.floor(Math.random() * charset.length)
+      password += charset[randomIndex]
     }
-    
-    return password;
+
+    return password
   }
 
   /**
@@ -91,39 +94,39 @@ export class PasswordUtil {
    * @returns Object with validation result and any errors
    */
   static validatePasswordStrength(password: string): {
-    isValid: boolean;
-    errors: string[];
+    isValid: boolean
+    errors: string[]
   } {
-    const errors: string[] = [];
+    const errors: string[] = []
 
     if (!password) {
-      errors.push('Password is required');
-      return { isValid: false, errors };
+      errors.push('Password is required')
+      return { isValid: false, errors }
     }
 
     if (password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
+      errors.push('Password must be at least 8 characters long')
     }
 
     if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
+      errors.push('Password must contain at least one lowercase letter')
     }
 
     if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
+      errors.push('Password must contain at least one uppercase letter')
     }
 
     if (!/\d/.test(password)) {
-      errors.push('Password must contain at least one number');
+      errors.push('Password must contain at least one number')
     }
 
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      errors.push('Password must contain at least one special character');
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
+      errors.push('Password must contain at least one special character')
     }
 
     return {
       isValid: errors.length === 0,
       errors,
-    };
+    }
   }
 }

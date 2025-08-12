@@ -1,12 +1,19 @@
-import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { Reflector } from '@nestjs/core';
-import { Observable } from 'rxjs';
+import type { ExecutionContext } from '@nestjs/common'
+import type { Reflector } from '@nestjs/core'
+import type { Observable } from 'rxjs'
+import { Injectable, UnauthorizedException } from '@nestjs/common'
+/**
+ * Decorator to mark endpoints as public (skip authentication)
+ * Usage: @Public()
+ */
+import { SetMetadata } from '@nestjs/common'
+
+import { AuthGuard } from '@nestjs/passport'
 
 /**
  * Metadata key for marking endpoints as public (skip authentication)
  */
-export const IS_PUBLIC_KEY = 'isPublic';
+export const IS_PUBLIC_KEY = 'isPublic'
 
 /**
  * JWT Authentication Guard
@@ -16,7 +23,7 @@ export const IS_PUBLIC_KEY = 'isPublic';
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(private reflector: Reflector) {
-    super();
+    super()
   }
 
   /**
@@ -29,14 +36,14 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
-    ]);
+    ])
 
     if (isPublic) {
-      return true;
+      return true
     }
 
     // Use passport JWT strategy for authentication
-    return super.canActivate(context);
+    return super.canActivate(context)
   }
 
   /**
@@ -50,35 +57,35 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     // If there's an error or no user, throw UnauthorizedException
     if (err || !user) {
-      const request = context.switchToHttp().getRequest();
-      
+      const request = context.switchToHttp().getRequest()
+
       // Provide specific error messages based on the failure reason
-      let errorMessage = 'Authentication failed';
-      
+      let errorMessage = 'Authentication failed'
+
       if (info) {
         switch (info.name) {
           case 'TokenExpiredError':
-            errorMessage = 'Access token has expired';
-            break;
+            errorMessage = 'Access token has expired'
+            break
           case 'JsonWebTokenError':
-            errorMessage = 'Invalid access token';
-            break;
+            errorMessage = 'Invalid access token'
+            break
           case 'NotBeforeError':
-            errorMessage = 'Access token not active yet';
-            break;
+            errorMessage = 'Access token not active yet'
+            break
           case 'TokenRequiredError':
           case 'AuthTokenMissingError':
-            errorMessage = 'Access token is required';
-            break;
+            errorMessage = 'Access token is required'
+            break
           default:
             if (info.message) {
-              errorMessage = info.message;
+              errorMessage = info.message
             }
         }
       }
 
       if (err?.message) {
-        errorMessage = err.message;
+        errorMessage = err.message
       }
 
       // Log the authentication failure
@@ -88,18 +95,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         userAgent: request.headers['user-agent'],
         ip: request.ip,
         timestamp: new Date().toISOString(),
-      });
+      })
 
-      throw new UnauthorizedException(errorMessage);
+      throw new UnauthorizedException(errorMessage)
     }
 
-    return user;
+    return user
   }
 }
-
-/**
- * Decorator to mark endpoints as public (skip authentication)
- * Usage: @Public()
- */
-import { SetMetadata } from '@nestjs/common';
-export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true)

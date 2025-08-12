@@ -1,18 +1,18 @@
-const express = require('express');
+const express = require('express')
 
-console.log('🚀 Testing Express directly...');
+console.log('🚀 Testing Express directly...')
 
-const app = express();
+const app = express()
 
 app.get('/', (req, res) => {
-  console.log('📥 Request received at /');
-  res.json({ message: 'Express server is working!', timestamp: Date.now() });
-});
+  console.log('📥 Request received at /')
+  res.json({ message: 'Express server is working!', timestamp: Date.now() })
+})
 
 const server = app.listen(3001, '0.0.0.0', () => {
-  console.log('✅ Express server listening on http://localhost:3001');
-});
+  console.log('✅ Express server listening on http://localhost:3001')
+})
 
 server.on('error', (err) => {
-  console.error('❌ Express server error:', err);
-});
+  console.error('❌ Express server error:', err)
+})

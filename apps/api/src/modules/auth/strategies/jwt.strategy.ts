@@ -1,21 +1,21 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { EnvConfigService } from '../../../core/config/env.config';
-import { AuthRepository } from '../auth.repo';
-import { JwtPayload } from '../utils/jwt.util';
+import type { EnvConfigService } from '../../../core/config/env.config'
+import type { AuthRepository } from '../auth.repo'
+import type { JwtPayload } from '../utils/jwt.util'
+import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { PassportStrategy } from '@nestjs/passport'
+import { ExtractJwt, Strategy } from 'passport-jwt'
 
 /**
  * User context interface for authenticated requests
  * Contains all necessary information for authorization
  */
 export interface AuthenticatedUser {
-  id: string;
-  email: string;
-  role: string;
-  orgId?: string;
-  jti: string;
-  tokenType: 'access' | 'refresh';
+  id: string
+  email: string
+  role: string
+  orgId?: string
+  jti: string
+  tokenType: 'access' | 'refresh'
 }
 
 /**
@@ -35,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       algorithms: ['HS256'],
       // Pass request to validate method for additional context
       passReqToCallback: true,
-    });
+    })
   }
 
   /**
@@ -49,17 +49,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   async validate(req: any, payload: JwtPayload): Promise<AuthenticatedUser> {
     try {
       // Validate payload structure
-      this.validateJwtPayload(payload);
+      this.validateJwtPayload(payload)
 
       // Only allow access tokens for most endpoints
       if (payload.type !== 'access') {
-        throw new UnauthorizedException('Invalid token type. Access token required.');
+        throw new UnauthorizedException('Invalid token type. Access token required.')
       }
 
       // Verify user still exists and is active
-      const user = await this.authRepo.findUserById(payload.sub);
+      const user = await this.authRepo.findUserById(payload.sub)
       if (!user) {
-        throw new UnauthorizedException('User not found or deactivated');
+        throw new UnauthorizedException('User not found or deactivated')
       }
 
       // Log authentication event for audit
@@ -74,7 +74,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         },
         ipAddress: this.extractIpAddress(req),
         userAgent: req.headers['user-agent'],
-      });
+      })
 
       // Return authenticated user context
       return {
@@ -84,8 +84,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         orgId: payload.orgId,
         jti: payload.jti!,
         tokenType: payload.type,
-      };
-    } catch (error) {
+      }
+    }
+    catch (error) {
       // Log security event for failed authentication
       await this.authRepo.logSecurityEvent({
         userId: payload?.sub,
@@ -98,12 +99,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         },
         ipAddress: this.extractIpAddress(req),
         userAgent: req.headers['user-agent'],
-      });
+      })
 
       if (error instanceof UnauthorizedException) {
-        throw error;
+        throw error
       }
-      throw new UnauthorizedException('Token validation failed');
+      throw new UnauthorizedException('Token validation failed')
     }
   }
 
@@ -114,37 +115,37 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    */
   private validateJwtPayload(payload: any): asserts payload is JwtPayload {
     if (!payload || typeof payload !== 'object') {
-      throw new UnauthorizedException('Invalid token payload');
+      throw new UnauthorizedException('Invalid token payload')
     }
 
     if (!payload.sub || typeof payload.sub !== 'string') {
-      throw new UnauthorizedException('Token missing valid user ID');
+      throw new UnauthorizedException('Token missing valid user ID')
     }
 
     if (!payload.role || typeof payload.role !== 'string') {
-      throw new UnauthorizedException('Token missing valid role');
+      throw new UnauthorizedException('Token missing valid role')
     }
 
     if (!payload.type || !['access', 'refresh'].includes(payload.type)) {
-      throw new UnauthorizedException('Token missing valid type');
+      throw new UnauthorizedException('Token missing valid type')
     }
 
     if (!payload.jti || typeof payload.jti !== 'string') {
-      throw new UnauthorizedException('Token missing valid JTI');
+      throw new UnauthorizedException('Token missing valid JTI')
     }
 
     if (!payload.iat || typeof payload.iat !== 'number') {
-      throw new UnauthorizedException('Token missing valid issued at time');
+      throw new UnauthorizedException('Token missing valid issued at time')
     }
 
     if (!payload.exp || typeof payload.exp !== 'number') {
-      throw new UnauthorizedException('Token missing valid expiry time');
+      throw new UnauthorizedException('Token missing valid expiry time')
     }
 
     // Validate role is one of the expected values
-    const validRoles = ['owner', 'admin', 'instructor', 'student'];
+    const validRoles = ['owner', 'admin', 'instructor', 'student']
     if (!validRoles.includes(payload.role)) {
-      throw new UnauthorizedException(`Invalid role: ${payload.role}`);
+      throw new UnauthorizedException(`Invalid role: ${payload.role}`)
     }
   }
 
@@ -155,12 +156,12 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    */
   private extractIpAddress(req: any): string {
     return (
-      req.headers['x-forwarded-for']?.split(',')[0] ||
-      req.headers['x-real-ip'] ||
-      req.connection?.remoteAddress ||
-      req.socket?.remoteAddress ||
-      'unknown'
-    );
+      req.headers['x-forwarded-for']?.split(',')[0]
+      || req.headers['x-real-ip']
+      || req.connection?.remoteAddress
+      || req.socket?.remoteAddress
+      || 'unknown'
+    )
   }
 
   /**
@@ -169,7 +170,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
    * @returns Sanitized payload safe for logging
    */
   private sanitizePayloadForLogging(payload: any): any {
-    if (!payload) return null;
+    if (!payload)
+      return null
 
     return {
       sub: payload.sub ? '***' : undefined,
@@ -178,7 +180,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       type: payload.type,
       iat: payload.iat,
       exp: payload.exp,
-      jti: payload.jti ? payload.jti.slice(0, 8) + '***' : undefined,
-    };
+      jti: payload.jti ? `${payload.jti.slice(0, 8)}***` : undefined,
+    }
   }
 }

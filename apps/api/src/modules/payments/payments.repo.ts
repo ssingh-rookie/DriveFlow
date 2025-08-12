@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/core/prisma/prisma.service';
-import Stripe from 'stripe';
+import type { PrismaService } from 'src/core/prisma/prisma.service'
+import type Stripe from 'stripe'
+import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class PaymentsRepository {
@@ -15,7 +15,7 @@ export class PaymentsRepository {
       include: {
         user: true,
       },
-    });
+    })
   }
 
   async updateInstructorStripeAccountId(id: string, stripeAccountId: string) {
@@ -24,9 +24,9 @@ export class PaymentsRepository {
         id,
       },
       data: {
-        stripeAccountId: stripeAccountId,
+        stripeAccountId,
       },
-    });
+    })
   }
 
   async updateInstructorFromStripeEvent(
@@ -37,11 +37,11 @@ export class PaymentsRepository {
     const capabilities = Object.keys(account.capabilities) as (
       | 'card_payments'
       | 'transfers'
-    )[];
+    )[]
 
     return this.prisma.instructor.update({
       where: {
-        stripeAccountId: stripeAccountId,
+        stripeAccountId,
       },
       data: {
         stripeOnboardingStatus: account.details_submitted
@@ -51,6 +51,6 @@ export class PaymentsRepository {
         stripeRequirementsDue: account.requirements.currently_due,
         stripeConnectedAt: new Date(), // TODO: be more precise
       },
-    });
+    })
   }
 }
