@@ -1,9 +1,11 @@
-const http = require("node:http");
-const { spawn } = require("node:child_process");
-const path = require("node:path");
+import type { Buffer } from "node:buffer";
+import type { ChildProcess } from "node:child_process";
+import { spawn } from "node:child_process";
+import * as path from "node:path";
 
-describe("Working API Integration Tests", () => {
-  let serverProcess;
+describe("working API Integration Tests", () => {
+  jest.setTimeout(30000); // 30 second timeout
+  let serverProcess: ChildProcess;
   const API_BASE_URL = "http://localhost:3001/api";
   const TEST_INSTRUCTOR_ID = "123ed673-79ac-41d6-81da-79de6829be4a";
 
@@ -16,36 +18,36 @@ describe("Working API Integration Tests", () => {
     });
 
     // Wait for server to start
-    await new Promise((resolve, reject) => {
+    await new Promise<void>((resolve, reject) => {
       const timeout = setTimeout(() => {
         reject(new Error("Server startup timeout"));
       }, 10000);
 
-      serverProcess.stdout.on("data", (data) => {
+      serverProcess.stdout?.on("data", (data: Buffer) => {
         if (data.toString().includes("DriveFlow API running")) {
           clearTimeout(timeout);
           resolve();
         }
       });
 
-      serverProcess.stderr.on("data", (data) => {
+      serverProcess.stderr?.on("data", (data: Buffer) => {
         console.error("Server stderr:", data.toString());
       });
     });
 
     // Wait a bit more for server to be ready
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise<void>((resolve) => setTimeout(resolve, 1000));
   });
 
   afterAll(async () => {
     if (serverProcess) {
       serverProcess.kill("SIGTERM");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise<void>((resolve) => setTimeout(resolve, 1000));
     }
   });
 
-  describe("Health Check Endpoint", () => {
-    test("GET /api/health should return server status", async () => {
+  describe("health Check Endpoint", () => {
+    it("gET /api/health should return server status", async () => {
       const response = await fetch(`${API_BASE_URL}/health`);
       const data = await response.json();
 
@@ -58,8 +60,8 @@ describe("Working API Integration Tests", () => {
     });
   });
 
-  describe("Payout Readiness Endpoint", () => {
-    test("GET /api/payments/instructors/:id/payout-readiness should return instructor status", async () => {
+  describe("payout Readiness Endpoint", () => {
+    it("gET /api/payments/instructors/:id/payout-readiness should return instructor status", async () => {
       const response = await fetch(
         `${API_BASE_URL}/payments/instructors/${TEST_INSTRUCTOR_ID}/payout-readiness`,
       );
@@ -74,7 +76,7 @@ describe("Working API Integration Tests", () => {
       });
     });
 
-    test("should handle different instructor IDs", async () => {
+    it("should handle different instructor IDs", async () => {
       const testId = "different-instructor-id";
       const response = await fetch(
         `${API_BASE_URL}/payments/instructors/${testId}/payout-readiness`,
@@ -87,8 +89,8 @@ describe("Working API Integration Tests", () => {
     });
   });
 
-  describe("Stripe Connect Link Endpoint", () => {
-    test("GET /api/payments/instructors/:id/stripe/connect-link should return onboarding link", async () => {
+  describe("stripe Connect Link Endpoint", () => {
+    it("gET /api/payments/instructors/:id/stripe/connect-link should return onboarding link", async () => {
       const response = await fetch(
         `${API_BASE_URL}/payments/instructors/${TEST_INSTRUCTOR_ID}/stripe/connect-link`,
       );
@@ -108,7 +110,7 @@ describe("Working API Integration Tests", () => {
       );
     });
 
-    test("should include correct return URLs", async () => {
+    it("should include correct return URLs", async () => {
       const response = await fetch(
         `${API_BASE_URL}/payments/instructors/${TEST_INSTRUCTOR_ID}/stripe/connect-link`,
       );
@@ -126,8 +128,8 @@ describe("Working API Integration Tests", () => {
     });
   });
 
-  describe("CORS Headers", () => {
-    test("should include CORS headers in responses", async () => {
+  describe("cORS Headers", () => {
+    it("should include CORS headers in responses", async () => {
       const response = await fetch(`${API_BASE_URL}/health`);
 
       expect(response.headers.get("access-control-allow-origin")).toBe("*");
@@ -136,7 +138,7 @@ describe("Working API Integration Tests", () => {
       );
     });
 
-    test("should handle OPTIONS requests", async () => {
+    it("should handle OPTIONS requests", async () => {
       const response = await fetch(`${API_BASE_URL}/health`, {
         method: "OPTIONS",
       });
@@ -145,8 +147,8 @@ describe("Working API Integration Tests", () => {
     });
   });
 
-  describe("Error Handling", () => {
-    test("should return 404 for unknown routes", async () => {
+  describe("error Handling", () => {
+    it("should return 404 for unknown routes", async () => {
       const response = await fetch(`${API_BASE_URL}/unknown-route`);
       const data = await response.json();
 
@@ -158,7 +160,7 @@ describe("Working API Integration Tests", () => {
       });
     });
 
-    test("should handle malformed instructor IDs gracefully", async () => {
+    it("should handle malformed instructor IDs gracefully", async () => {
       const response = await fetch(
         `${API_BASE_URL}/payments/instructors/invalid-id/payout-readiness`,
       );
@@ -168,8 +170,8 @@ describe("Working API Integration Tests", () => {
     });
   });
 
-  describe("Response Format", () => {
-    test("all responses should be valid JSON", async () => {
+  describe("response Format", () => {
+    it("all responses should be valid JSON", async () => {
       const endpoints = [
         "/health",
         `/payments/instructors/${TEST_INSTRUCTOR_ID}/payout-readiness`,
