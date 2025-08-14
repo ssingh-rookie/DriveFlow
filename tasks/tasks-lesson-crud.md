@@ -29,19 +29,25 @@
 - [ ] Add `cancelledBy`, `cancelledAt`, `cancellationReason` fields
 - [ ] Add `rescheduledFrom`, `rescheduledAt`, `rescheduleReason` fields
 - [ ] Add `idempotencyKey` field for duplicate prevention
+- [ ] Add state transition tracking fields (`previousStatus`, `statusChangedAt`, `statusChangedBy`)
 - [ ] **Files**: `schema.prisma`, new migration
 
-#### **1.3: Add Audit Trail Enhancements**
-- [ ] Enhance existing `AuditLog` to capture state transitions
-- [ ] Add specific audit for booking changes (reschedule, cancel)
-- [ ] Ensure all policy decisions are audited
-- [ ] **Files**: `schema.prisma`, audit utilities
+#### **1.3: Add State Management & Audit Trail**
+- [ ] Create `LessonStateHistory` table for state transition tracking
+- [ ] Add `ScheduledStateTransition` table for auto-progression (NoShow, payment timeout)
+- [ ] Create state machine configuration table (`StateTransitionRules`)
+- [ ] Enhance existing `AuditLog` to capture state transitions with context
+- [ ] Add database constraints for state transition validation
+- [ ] **Files**: `schema.prisma`, new migrations, audit utilities
 
-#### **1.4: Create Instructor Overlap Constraints**
+#### **1.4: Add Availability & Constraint Tables**
+- [ ] Create `InstructorWorkingHours` table for scheduling windows
+- [ ] Add `TravelTimeCache` table for location-based buffers
+- [ ] Create `LicenseCompatibilityMatrix` table for lesson type validation
 - [ ] Add database constraint to prevent overlapping bookings
 - [ ] Create exclusion constraint for `(instructorId, startAt, endAt)`
-- [ ] Test constraint behavior with edge cases
-- [ ] **Files**: `schema.prisma`, new migration, tests
+- [ ] Add indexes for availability queries: `(instructorId, date, status)`, `(orgId, startAt, endAt)`
+- [ ] **Files**: `schema.prisma`, new migrations, tests
 
 ---
 
@@ -97,22 +103,34 @@
 #### **3.2: Build Lesson Service Core**
 - [ ] Create `LessonService` with pure business logic methods
 - [ ] Implement lesson creation with availability validation
-- [ ] Add lesson retrieval with proper RBAC filtering and role-based scoping
+- [ ] Add lesson retrieval with RBAC filtering using `AuthenticatedUser` and `scopedResourceIds`:
+  - **Role-based filtering**: Apply different query filters per role (owner/admin/instructor/student)
+  - **Scoped access**: Use scopedResourceIds from RoleGuard for instructors/students
+  - **Org context**: Always filter by user.orgId for multi-tenancy
 - [ ] Implement pagination logic with performance optimizations
 - [ ] Add caching layer for lesson lists (30s) and details (5min)
+- [ ] Add helper method `buildFilters(user: AuthenticatedUser, query)` for role-based query building
 - [ ] **Files**: `apps/api/src/modules/lessons/lesson.service.ts`
 
-#### **3.3: Implement Policy Engine**
+#### **3.3: Implement State Machine & Policy Engine**
+- [ ] Create `LessonStateMachine` service for state transition management
+- [ ] Implement state transition validation with guard conditions
+- [ ] Add auto-progression scheduling for NoShow and payment timeout
 - [ ] Create `PolicyService` for cancellation/reschedule rules
 - [ ] Implement actor-based fee calculation logic
 - [ ] Add cutoff window validation
-- [ ] **Files**: `apps/api/src/modules/lessons/policy.service.ts`
+- [ ] Create background job for scheduled state transitions
+- [ ] **Files**: `apps/api/src/modules/lessons/state-machine.service.ts`, `policy.service.ts`, `state-transition.job.ts`
 
-#### **3.4: Add State Transition Logic**
-- [ ] Enhance existing booking status transitions
-- [ ] Add validation for allowed state changes
-- [ ] Implement audit logging for all transitions
-- [ ] **Files**: `lesson.service.ts`, audit utilities
+#### **3.4: Build Enhanced Availability Service**
+- [ ] Create `AvailabilityService` with comprehensive slot checking
+- [ ] Implement travel buffer calculations between lessons
+- [ ] Add working hours validation (instructor schedules, org hours)
+- [ ] Implement license type compatibility checking
+- [ ] Add basic time-of-day restrictions (daylight hours for learners)
+- [ ] Create availability query optimization with caching
+- [ ] Add location-based availability filtering
+- [ ] **Files**: `apps/api/src/modules/availability/availability.service.ts`, cache utilities
 
 ---
 
@@ -124,34 +142,60 @@
 #### **4.1: Create Lesson Controller Foundation**
 - [ ] Create `LessonController` with proper decorators
 - [ ] Add route versioning (`/v1/lessons`)
-- [ ] Implement basic CRUD endpoints structure
+- [ ] Implement guards: `@UseGuards(JwtAuthGuard, RoleGuard)` on controller level
+- [ ] Import RBAC decorators: `ScopedLessonAccess`, `LessonManagement`, `Permissions`, `CurrentUser`
+- [ ] Implement basic CRUD endpoints structure with role-based access patterns
 - [ ] **Files**: `apps/api/src/modules/lessons/lesson.controller.ts`
 
 #### **4.2: Implement Lesson Creation (POST /lessons)**
+- [ ] Add `@Permissions('lessons:create', 'bookings:create')` decorator
 - [ ] Add endpoint with idempotency key support
+- [ ] Implement role-based creation logic (students book own, admins book for others)
+- [ ] Add `@CurrentUser()` parameter injection for user context
 - [ ] Integrate with existing payment service patterns
 - [ ] Implement proper error handling with ProblemDetails
 - [ ] **Files**: `lesson.controller.ts`, error handlers
 
 #### **4.3: Add Lesson Retrieval (GET /lessons, GET /lessons/:id)**
+- [ ] Add `@ScopedLessonAccess()` decorator for automatic RBAC scoping
 - [ ] Implement list endpoint with filtering and pagination (`actorScope`, `from`, `to`, `status`)
-- [ ] Add role-based data scoping (learner, parent, instructor, admin views)
+- [ ] Add role-based data scoping using `request.scopedResourceIds` from RoleGuard:
+  - **Instructors**: Only lessons they teach (assignedStudentIds)
+  - **Students**: Only own/children lessons (scopedResourceIds)  
+  - **Admin/Owner**: All org lessons (no scoping)
+- [ ] Add detailed view with `@ScopedLessonAccess()` for single lesson access
 - [ ] Implement performance optimizations (indexes, caching, eager/lazy loading)
-- [ ] Add detailed view endpoint with full lesson data and relations
-- [ ] Apply RBAC filters based on user role and org scope
 - [ ] **Files**: `lesson.controller.ts`, RBAC guards, caching layer
 
 #### **4.4: Implement Lesson Updates (PUT /lessons/:id)**
+- [ ] Add `@AuthorizedEndpoint(['owner', 'admin', 'instructor'], ['lessons:write'], true)` decorator
+- [ ] Implement scoped update logic (instructors can only update their lessons)
 - [ ] Add reschedule endpoint with availability recheck
 - [ ] Integrate policy engine for fee calculation
-- [ ] Handle payment processing for reschedule fees
+- [ ] Handle payment processing for reschedule fees  
+- [ ] Use `@CurrentUser()` for actor context in audit logs
 - [ ] **Files**: `lesson.controller.ts`, payment integration
 
 #### **4.5: Add Lesson Cancellation (DELETE /lessons/:id)**
-- [ ] Implement cancellation with actor detection
-- [ ] Add refund calculation and processing
-- [ ] Ensure proper audit trail for cancellations
+- [ ] Add `@Permissions('lessons:delete')` with role restrictions (admin/owner only for hard delete)
+- [ ] Implement actor-based cancellation logic using `@CurrentUser()`:
+  - **Students**: Can request cancellation (soft cancel)
+  - **Instructors**: Can cancel their lessons
+  - **Admin/Owner**: Can cancel any org lesson
+- [ ] Add refund calculation and processing based on actor and policy
+- [ ] Ensure proper audit trail for cancellations with user context
 - [ ] **Files**: `lesson.controller.ts`, refund processing
+
+#### **4.6: RBAC Integration & Testing**
+- [ ] Test all endpoints with different user roles (owner, admin, instructor, student)
+- [ ] Verify scoped access works correctly:
+  - Instructors can only see/modify lessons for assigned students
+  - Students can only see/modify their own lessons (+ children for parents)
+  - Admin/Owner can see/modify all org lessons
+- [ ] Test cross-org data isolation (users cannot access other org's lessons)
+- [ ] Verify audit logging captures all RBAC decisions and user context
+- [ ] Test permission edge cases (instructor trying to access unassigned lesson)
+- [ ] **Files**: Integration tests, RBAC test suites
 
 ---
 
@@ -178,11 +222,12 @@
 - [ ] Add event consumers for downstream processing
 - [ ] **Files**: Event definitions, outbox handlers
 
-#### **5.4: Availability Service Enhancement**
-- [ ] Enhance existing availability checking logic
-- [ ] Add travel buffer calculation between lessons
-- [ ] Implement working hours and license type validation
-- [ ] **Files**: Availability service, validation utilities
+#### **5.4: Background Jobs & State Management**
+- [ ] Create scheduled jobs for state transitions (NoShow, payment timeout)
+- [ ] Implement retry logic for failed state transitions
+- [ ] Add monitoring and alerting for state management system
+- [ ] Create cleanup jobs for expired draft lessons
+- [ ] **Files**: Background job scheduler, monitoring utilities
 
 ---
 
@@ -332,6 +377,41 @@
 - ✅ Comprehensive error handling
 - ✅ Structured logging without PII
 
+### **RBAC Security Requirements**
+- ✅ All endpoints protected with `@UseGuards(JwtAuthGuard, RoleGuard)`
+- ✅ Proper permission decorators on all CRUD operations
+- ✅ Role-based data scoping enforced (instructors, students see only relevant data)
+- ✅ Cross-org data isolation maintained (orgId filtering)
+- ✅ Audit trail for all authorization decisions
+- ✅ Scoped resource access working correctly (assignedStudentIds, childStudentIds)
+- ✅ Permission matrix correctly implemented per role
+
 ---
 
-**Next Step**: Begin implementation with Phase 1 (Database schema enhancements) - would you like me to start with the first sub-task?
+## 🎯 **MVP vs Post-MVP Scope**
+
+### **MVP Core Requirements (Must Have)**
+- ✅ **State Management Engine**: Complete lesson lifecycle with auto-transitions
+- ✅ **Enhanced Availability Service**: Travel buffers, working hours, license validation  
+- ✅ **RBAC Integration**: Role-based access with scoped permissions
+- ✅ **Basic Payment Flow**: Create, reschedule fees, cancellation refunds
+- ✅ **Core CRUD Operations**: Create, read, update, cancel lessons
+- ✅ **Audit Trail**: Full state transition and action logging
+
+### **Post-MVP Enhancements (Future Iterations)**
+- 🔄 **Advanced Payment Scenarios**: 3D Secure, split payments, complex refund scenarios
+- 🔄 **Real-time Features**: Socket.IO, calendar integration, push notifications
+- 🔄 **Mobile GPS Integration**: Lesson tracking, check-in/out, location validation
+- 🔄 **Performance Optimizations**: Advanced caching, query optimization, scalability
+- 🔄 **Advanced RBAC Edge Cases**: Dynamic role changes, permission escalation prevention
+- 🔄 **External Integrations**: Weather API, Maps API traffic data, advanced geocoding
+
+### **Implementation Priority**
+1. **Phase 1-4**: MVP Core (State Management + Availability + RBAC + Basic Payments)
+2. **Phase 5-6**: Frontend integration with MVP backend
+3. **Phase 7**: Testing and quality assurance for MVP
+4. **Future Phases**: Post-MVP enhancements based on user feedback
+
+---
+
+**Next Step**: Begin MVP implementation with Phase 1 (Database schema enhancements) - would you like me to start with the first sub-task?

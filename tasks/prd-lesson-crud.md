@@ -77,6 +77,83 @@ flowchart TB
 - Payment edge cases: 3‑D Secure, partial wallet + card top‑up.
 - Audit every decision point.
 
+### 2.4 Availability Service Integration Requirements
+
+#### **Critical Gap: Sophisticated Availability Checking**
+The lesson booking system requires comprehensive availability validation beyond simple time slot checking:
+
+**Travel Buffer Calculations:**
+- **Distance-Based Buffers**: Calculate travel time between lesson locations using Maps API
+- **Dynamic Buffers**: Adjust buffer time based on traffic conditions, time of day, and route complexity
+- **Multi-Location Support**: Handle instructors teaching at multiple pickup/drop-off points
+- **Buffer Minimums**: Enforce minimum 15-minute buffer between lessons, configurable per instructor
+- **Route Optimization**: Suggest optimal lesson sequencing to minimize travel time
+
+**Working Hours & Scheduling Constraints:**
+- **Instructor Availability Windows**: Personal working hours (e.g., 8:00-18:00 weekdays)
+- **Organization Hours**: Business operation hours that override instructor preferences
+- **Break Time Management**: Mandatory breaks (lunch, rest periods) with buffer enforcement
+- **Weekly Schedule Patterns**: Recurring availability patterns with exception handling
+- **Holiday & Leave Management**: Integration with instructor leave/holiday calendar
+
+**License Type Compatibility Validation:**
+- **Student License Requirements**: Match lesson type with student's current license level
+- **Instructor Certifications**: Verify instructor qualifications for specific lesson types (e.g., manual vs automatic, heavy vehicle)
+- **Progression Rules**: Enforce prerequisite lessons before advanced training
+- **Restriction Validation**: Check student restrictions (medical, age-based, legal)
+
+**Time-of-Day & Environmental Rules:**
+- **Daylight Restrictions**: Learner drivers restricted to daylight hours (sunrise to sunset)
+- **Night Driving Certification**: Advanced lessons requiring special instructor certification
+- **Weather Conditions**: Integration with weather API for lesson safety assessment
+- **Peak Hour Limitations**: Restricted lesson types during rush hour periods
+- **School Zone Restrictions**: Time-based restrictions around educational facilities
+
+**Implementation Requirements:**
+```typescript
+// Availability Service Interface
+interface AvailabilityService {
+  checkSlotAvailability(request: AvailabilityRequest): Promise<AvailabilityResult>;
+  calculateTravelBuffer(from: Location, to: Location, timeOfDay: Date): Promise<number>;
+  validateLicenseCompatibility(studentId: string, lessonType: string): Promise<ValidationResult>;
+  checkTimeRestrictions(dateTime: Date, studentId: string, instructorId: string): Promise<RestrictionResult>;
+  getAvailableSlots(filters: AvailabilityFilters): Promise<AvailableSlot[]>;
+}
+
+// Availability Request
+interface AvailabilityRequest {
+  instructorId: string;
+  studentId: string;
+  lessonType: string;
+  startTime: Date;
+  endTime: Date;
+  pickupLocation: Location;
+  dropoffLocation?: Location;
+}
+
+// Availability Filters
+interface AvailabilityFilters {
+  instructorIds?: string[];
+  lessonTypes?: string[];
+  dateRange: { start: Date; end: Date };
+  minDuration: number;
+  location?: Location;
+  maxTravelDistance?: number;
+}
+```
+
+**Database Requirements:**
+- **Instructor Working Hours**: Flexible schedule patterns with recurring rules and exceptions
+- **Travel Time Cache**: Pre-calculated travel times between common locations with TTL
+- **License Compatibility Matrix**: Student license types vs available lesson types
+- **Time Restriction Rules**: Configurable rules for daylight, weather, and peak hour restrictions
+- **Location Geocoding**: Cached latitude/longitude for all pickup/dropoff locations
+
+**External Integrations:**
+- **Maps API**: Real-time travel time calculations with traffic data
+- **Weather API**: Current and forecasted weather conditions for safety assessment
+- **Geocoding Service**: Address to coordinate conversion for location-based calculations
+
 ---
 
 ## 3. Read (Retrieve)
@@ -346,7 +423,9 @@ flowchart TB
 
 ---
 
-## 7. State Model
+## 7. State Model & Transition Requirements
+
+### 7.1 Lesson Lifecycle States
 
 ```
 Draft -> PendingPayment -> Scheduled -> InProgress -> Completed
@@ -356,9 +435,254 @@ Scheduled -> NoShow (auto after grace)
 
 **Disallowed transitions:** `Completed/Cancelled/NoShow` → anything (except Admin data fix endpoint with strict audit).
 
+### 7.2 State Management Implementation Requirements
+
+#### **Critical Gap: State Transition Engine**
+The lesson CRUD system requires a sophisticated state management engine beyond simple status updates:
+
+**State Transition Validation Logic:**
+- **Guard Conditions**: Each transition must validate prerequisites (payment status, time constraints, user permissions)
+- **Business Rules**: Enforce cancellation policies, reschedule windows, and grace periods
+- **Atomic Operations**: State changes must be transactional with audit logging
+- **Rollback Capability**: Failed transitions must revert cleanly with error reporting
+
+**Auto-Progression Rules:**
+- **NoShow Detection**: Automatically transition `Scheduled → NoShow` after configurable grace period (default 15 minutes)
+- **Payment Timeout**: Transition `PendingPayment → Cancelled` after payment window expires (default 30 minutes)
+- **Lesson Completion**: Instructor-initiated transition `InProgress → Completed` with optional feedback capture
+- **Scheduled Tasks**: Background jobs for state transitions with retry logic and monitoring
+
+**State-Specific Behaviors:**
+- **Draft**: Temporary state for lesson creation workflow, auto-cleanup after 1 hour
+- **PendingPayment**: Hold instructor availability, enable payment retry, timeout handling
+- **Scheduled**: Enable reschedule/cancel actions, send reminder notifications, availability release on cancel
+- **InProgress**: GPS tracking (mobile), disable modifications, enable completion actions
+- **Completed**: Generate completion certificates, trigger payout processing, enable feedback collection
+- **Cancelled**: Process refunds, release availability, audit trail capture
+- **NoShow**: Instructor compensation handling, automatic rescheduling offers
+
+**Implementation Requirements:**
+```typescript
+// State Machine Interface
+interface LessonStateMachine {
+  canTransition(from: LessonStatus, to: LessonStatus, context: TransitionContext): boolean;
+  executeTransition(lessonId: string, newStatus: LessonStatus, context: TransitionContext): Promise<LessonStateResult>;
+  getAvailableTransitions(currentStatus: LessonStatus, userRole: OrgRole): LessonStatus[];
+  scheduleAutoTransitions(lessonId: string): Promise<void>;
+}
+
+// Transition Context
+interface TransitionContext {
+  actor: AuthenticatedUser;
+  reason?: string;
+  metadata?: Record<string, any>;
+  forceOverride?: boolean; // Admin only
+}
+```
+
+**Database Requirements:**
+- **State History Table**: Track all state changes with timestamps, actors, and reasons
+- **Scheduled Transitions**: Queue for background state changes with retry logic
+- **State Locks**: Prevent concurrent state modifications with optimistic locking
+
 ---
 
-## 8. Data & Persistence Notes
+## 8. Role-Based Access Control (RBAC) Requirements
+
+### 8.1 RBAC Architecture Integration
+
+The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
+
+- **JWT Authentication Guard** (`JwtAuthGuard`)
+- **Role Authorization Guard** (`RoleGuard`) 
+- **Permission-based decorators** (`@Permissions`, `@ScopedLessonAccess`)
+- **Organization scoping** for multi-tenancy
+- **Audit logging** for all authorization decisions
+
+### 8.2 Role-Based Permission Matrix
+
+#### **Owner Role**
+- **Permissions**: Full access to all lesson operations
+- **Scope**: All lessons within their organization
+- **CRUD Access**: 
+  - ✅ Create lessons for any student/instructor
+  - ✅ Read all org lessons with full details
+  - ✅ Update/reschedule any lesson
+  - ✅ Cancel/delete any lesson with full refund control
+
+#### **Admin Role** 
+- **Permissions**: Nearly full access (cannot delete org)
+- **Scope**: All lessons within their organization  
+- **CRUD Access**:
+  - ✅ Create lessons for any student/instructor
+  - ✅ Read all org lessons with full details
+  - ✅ Update/reschedule any lesson
+  - ✅ Cancel lessons with refund processing
+
+#### **Instructor Role**
+- **Permissions**: `lessons:read`, `lessons:write`, `lessons:create`, `students:read` (scoped)
+- **Scope**: Only lessons they teach + assigned students
+- **CRUD Access**:
+  - ✅ Create lessons for assigned students only
+  - ✅ Read lessons where `instructorId = user.id` OR `studentId IN assignedStudentIds`
+  - ✅ Update/reschedule their own lessons
+  - ❌ Cannot delete lessons (admin function)
+
+#### **Student Role**
+- **Permissions**: `lessons:read`, `bookings:create` (scoped to self)
+- **Scope**: Only own lessons + children's lessons (for parents)
+- **CRUD Access**:
+  - ✅ Create bookings for self/children
+  - ✅ Read lessons where `studentId IN [self, children]`
+  - ❌ Cannot update lessons directly (must request via instructor/admin)
+  - ❌ Cannot delete lessons (can request cancellation)
+
+### 8.3 Endpoint-Specific RBAC Implementation
+
+#### **POST /lessons (Create)**
+```typescript
+@Permissions('lessons:create', 'bookings:create')
+// All roles can create, but scoped:
+// - Students: only for self/children
+// - Instructors: only for assigned students  
+// - Admin/Owner: any student in org
+```
+
+#### **GET /lessons (List)**
+```typescript
+@ScopedLessonAccess() // Uses 'lessons:read' + automatic scoping
+// Returns filtered results based on role:
+// - Students: WHERE studentId IN [self, children]
+// - Instructors: WHERE instructorId = user.id OR studentId IN assignedStudents
+// - Admin/Owner: WHERE orgId = user.orgId (all org lessons)
+```
+
+#### **GET /lessons/:id (Details)**
+```typescript
+@ScopedLessonAccess()
+// Returns lesson if user has scoped access:
+// - Students: only if they are the student or parent
+// - Instructors: only if they teach the lesson or student is assigned
+// - Admin/Owner: any lesson in org
+```
+
+#### **PUT /lessons/:id (Update/Reschedule)**
+```typescript
+@AuthorizedEndpoint(['owner', 'admin', 'instructor'], ['lessons:write'], true)
+// Can modify lesson if:
+// - Instructors: they teach the lesson
+// - Admin/Owner: any org lesson
+// - Students: cannot directly update (request only)
+```
+
+#### **DELETE /lessons/:id (Cancel)**
+```typescript
+@Permissions('lessons:delete')
+// Soft cancel vs hard delete:
+// - Students: can request cancellation (soft)
+// - Instructors: can cancel their lessons
+// - Admin/Owner: can hard delete any org lesson
+```
+
+### 8.4 Data Scoping Implementation
+
+#### **Automatic Scoping via RoleGuard**
+The `RoleGuard` automatically adds `scopedResourceIds` to the request:
+
+```typescript
+// For Instructors:
+request.scopedResourceIds = ['student-1-id', 'student-2-id'] // assignedStudentIds
+
+// For Students/Parents:
+request.scopedResourceIds = ['student-id', 'child-1-id'] // self + children
+
+// For Admin/Owner:
+// No additional scoping (org-level access)
+```
+
+#### **Service Layer Filtering**
+```typescript
+// LessonService applies role-based filters:
+switch (user.role) {
+  case 'instructor':
+    return { instructorId: user.id };
+  case 'student':
+    return { studentId: { in: request.scopedResourceIds } };
+  case 'admin':
+  case 'owner':
+    return {}; // No additional filtering beyond orgId
+}
+```
+
+### 8.5 Multi-Tenancy & Organization Scoping
+
+#### **Mandatory Organization Context**
+- All lesson queries MUST include `orgId = user.orgId`
+- Cross-organization access is strictly prohibited
+- Data isolation enforced at database and service levels
+
+#### **Organization Boundary Enforcement**
+```typescript
+// Every lesson operation includes:
+const baseFilter = {
+  orgId: user.orgId, // Mandatory org scoping
+  ...roleBasedFilters  // Additional role-based restrictions
+};
+```
+
+### 8.6 Audit & Security Requirements
+
+#### **Authorization Audit Trail**
+All RBAC decisions must be logged:
+```typescript
+{
+  userId: 'instructor-123',
+  event: 'authorization_granted|denied',
+  endpoint: 'GET /v1/lessons',
+  requiredPermissions: ['lessons:read'],
+  userRole: 'instructor',
+  orgId: 'org-456',
+  scopedResourceIds: ['student-1', 'student-2'],
+  timestamp: '2025-08-14T10:00:00Z'
+}
+```
+
+#### **Permission Edge Cases**
+- **Instructor accessing unassigned student lesson**: 403 Forbidden
+- **Student accessing another student's lesson**: 403 Forbidden  
+- **Cross-org access attempts**: 404 Not Found (don't reveal existence)
+- **Permission escalation attempts**: Logged + 403 Forbidden
+
+#### **Security Validations**
+- Validate `instructorId` in create requests matches assigned students
+- Verify lesson ownership before updates/cancellations
+- Check policy constraints before allowing modifications
+- Audit all permission bypass attempts
+
+### 8.7 RBAC Testing Requirements
+
+#### **Role-Based Test Scenarios**
+- ✅ Each role can only access scoped resources
+- ✅ Cross-role access attempts are properly blocked
+- ✅ Organization boundaries are enforced
+- ✅ Permission escalation is prevented
+- ✅ Audit logs capture all authorization decisions
+
+#### **Scoped Access Validation**
+- ✅ Instructors see only assigned student lessons
+- ✅ Students see only own/children lessons
+- ✅ Admin/Owner see all org lessons
+- ✅ Scoping works for both list and detail endpoints
+
+#### **Edge Case Testing**
+- ✅ Instructor assignment changes reflect immediately in access
+- ✅ Student role changes (e.g., becoming parent) update scoping
+- ✅ Cross-org lesson access attempts fail gracefully
+- ✅ Invalid permission combinations are rejected
+
+---
+
+## 9. Data & Persistence Notes
 
 - **Unique exclusion** on `(instructorId, start, end)` to prevent overlaps.
 - **Outbox** events: `LessonCreated | LessonRescheduled | LessonCancelled`.
@@ -368,8 +692,9 @@ Scheduled -> NoShow (auto after grace)
 
 ---
 
-## 9. QA Scenarios (selected)
+## 10. QA Scenarios (selected)
 
+### **Core Functionality**
 - Cannot book overlapping instructor slots (but different instructors can overlap).
 - Reschedule within cutoff prompts fee; blocks if unpaid.
 - Cancelling unpaid `PendingPayment` releases hold without refund.
@@ -377,12 +702,41 @@ Scheduled -> NoShow (auto after grace)
 - Policy overrides by Admin require reason and audit entry.
 - Notification fanout verified to all parties.
 
+### **RBAC & Security Scenarios**
+- **Instructor Scoping**: Instructor can only see lessons for assigned students; attempting to access unassigned lesson returns 403.
+- **Student Scoping**: Student can only see own lessons (+ children for parents); attempting to access other student's lesson returns 403.
+- **Cross-Org Isolation**: User from Org A attempting to access lesson from Org B returns 404 (not 403, to avoid revealing existence).
+- **Permission Escalation**: Student attempting to update/delete lesson directly (vs request) returns 403 with audit log entry.
+- **Role Assignment Changes**: When instructor is unassigned from student, previously accessible lessons become 403 immediately.
+- **Admin Override**: Admin can cancel any org lesson with full refund, including overriding instructor-only policies.
+- **Audit Trail**: All RBAC decisions (granted/denied) are logged with user context, endpoint, and scoped resources.
+
 ---
 
-## 10. Appendix — Sample Errors
+## 11. Appendix — Sample Errors
 
+### **Business Logic Errors**
 ```json
-{ "error": "SLOT_TAKEN", "message": "The selected time is no longer available." }{ "error": "CUTOFF_EXCEEDED", "message": "Rescheduling not permitted within 2 hours of start." }{ "error": "NOT_RESCHEDULABLE", "message": "Completed lessons cannot be rescheduled." }
+{ "error": "SLOT_TAKEN", "message": "The selected time is no longer available." }
+{ "error": "CUTOFF_EXCEEDED", "message": "Rescheduling not permitted within 2 hours of start." }
+{ "error": "NOT_RESCHEDULABLE", "message": "Completed lessons cannot be rescheduled." }
+```
+
+### **RBAC & Security Errors**
+```json
+{ "error": "INSUFFICIENT_PERMISSIONS", "message": "Missing required permissions: lessons:write" }
+{ "error": "ACCESS_DENIED", "message": "Instructor not assigned to this student" }
+{ "error": "RESOURCE_NOT_FOUND", "message": "Lesson not found" }
+{ "error": "SCOPE_VIOLATION", "message": "Students can only access their own resources" }
+{ "error": "ORG_BOUNDARY_VIOLATION", "message": "Cross-organization access not permitted" }
+{ "error": "ROLE_RESTRICTION", "message": "This action requires admin privileges" }
+```
+
+### **Authentication Errors**
+```json
+{ "error": "UNAUTHORIZED", "message": "Access token is required" }
+{ "error": "TOKEN_EXPIRED", "message": "Access token has expired" }
+{ "error": "INVALID_TOKEN", "message": "Invalid access token" }
 ```
 
 ---
@@ -391,11 +745,11 @@ Scheduled -> NoShow (auto after grace)
 
 ---
 
-## 11. Requirements ↔︎ Persona Traceability
+## 12. Requirements ↔︎ Persona Traceability
 
 This section links functional requirements to the personas they serve. Use it during backlog refinement, sprint planning, and UAT.
 
-### 11.1 Capability ↔︎ Persona Matrix (High‑level)
+### 12.1 Capability ↔︎ Persona Matrix (High‑level)
 
 | Capability | ID | Learner | Parent | Instructor | Admin | Priority | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -407,7 +761,7 @@ This section links functional requirements to the personas they serve. Use it du
 | Payments & Refunds | C-06 | ✓ | ✓ |  | ✓ | Must | Card/wallet support; admin overrides |
 | Audit & Events | C-07 |  |  |  | ✓ | Must | Full audit, outbox events |
 
-### 11.2 Functional Requirements Mapped to Personas
+### 12.2 Functional Requirements Mapped to Personas
 
 ### Create / Book
 
@@ -449,7 +803,7 @@ This section links functional requirements to the personas they serve. Use it du
 | F-14 | Auto mark `NoShow` after grace | Instructor | Learner, Parent, Admin | Scheduled job; policy-driven |
 | F-15 | Admin override on policy/refund | Admin | Learner, Parent, Instructor | Mandatory reason; audit + approval rules |
 
-### 11.3 Non‑Functional Requirements (NFRs) tagged by Persona Risk
+### 12.3 Non‑Functional Requirements (NFRs) tagged by Persona Risk
 
 | NFR ID | Requirement | Persona Risk if unmet | Target |
 | --- | --- | --- | --- |
@@ -461,7 +815,7 @@ This section links functional requirements to the personas they serve. Use it du
 | NF-06 | Reliable event outbox | Missed notifications (all) | Exactly-once delivery semantics |
 | NF-07 | PII minimisation | Compliance overhead (all) | Only necessary fields; masked logs |
 
-### 11.4 UAT Scenarios by Persona (Shortlist)
+### 12.4 UAT Scenarios by Persona (Shortlist)
 
 - **Learner/Parent**
     - Book with wallet-only payment → success notification includes calendar invite.
