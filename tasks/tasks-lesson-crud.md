@@ -10,6 +10,7 @@
 - ✅ **Keep existing `BookingStatus` enum** - Work within current state model
 - ✅ **Maintain 1:1 Booking ↔ Lesson relationship** - Enhance existing pattern  
 - ✅ **Gradual evolution** - Build on existing functionality incrementally
+- ✅ **Enhanced Read Operations** - Add comprehensive lesson retrieval with role-based scoping, pagination, and performance optimizations
 
 ---
 
@@ -51,12 +52,15 @@
 
 #### **2.1: Create Lesson CRUD Schemas**
 - [ ] Define `CreateLessonSchema`, `UpdateLessonSchema`, `CancelLessonSchema` in `@driveflow/contracts`
+- [ ] Add `LessonQuerySchema` with filtering options (`actorScope`, `instructorId`, `learnerId`, `from`, `to`, `status`)
+- [ ] Create pagination schemas (`page`, `pageSize`, default 25, max 100)
 - [ ] Add location schema with lat/lng/label structure
-- [ ] Create pagination and filtering schemas
 - [ ] **Files**: `packages/contracts/src/lessons/`
 
 #### **2.2: Create Response DTOs**
 - [ ] Define `LessonDto`, `LessonListDto`, `LessonDetailsDto`
+- [ ] Add pagination response schema (`LessonPaginatedResponse`)
+- [ ] Create lesson summary schema for list views (minimal data)
 - [ ] Add status transition response schemas
 - [ ] Create error schemas for lesson-specific errors
 - [ ] **Files**: `packages/contracts/src/lessons/`
@@ -82,14 +86,20 @@
 
 #### **3.1: Create Lesson Repository**
 - [ ] Implement `LessonRepository` with all CRUD operations
+- [ ] Add optimized queries for lesson listing with filters (`orgId`, `instructorId`, `learnerId`, `status`, date ranges)
+- [ ] Implement role-based data scoping queries (learner, parent, instructor, admin)
+- [ ] Add database indexes: `(orgId, instructorId, start)`, `(orgId, learnerId, start)`
 - [ ] Add availability checking queries with instructor constraints
 - [ ] Implement overlap detection queries
+- [ ] Add pagination with eager/lazy loading for relations (instructor/learner names vs full details)
 - [ ] **Files**: `apps/api/src/modules/lessons/lesson.repo.ts`
 
 #### **3.2: Build Lesson Service Core**
 - [ ] Create `LessonService` with pure business logic methods
 - [ ] Implement lesson creation with availability validation
-- [ ] Add lesson retrieval with proper RBAC filtering
+- [ ] Add lesson retrieval with proper RBAC filtering and role-based scoping
+- [ ] Implement pagination logic with performance optimizations
+- [ ] Add caching layer for lesson lists (30s) and details (5min)
 - [ ] **Files**: `apps/api/src/modules/lessons/lesson.service.ts`
 
 #### **3.3: Implement Policy Engine**
@@ -124,10 +134,12 @@
 - [ ] **Files**: `lesson.controller.ts`, error handlers
 
 #### **4.3: Add Lesson Retrieval (GET /lessons, GET /lessons/:id)**
-- [ ] Implement list endpoint with filtering and pagination
-- [ ] Add detailed view endpoint with full lesson data
+- [ ] Implement list endpoint with filtering and pagination (`actorScope`, `from`, `to`, `status`)
+- [ ] Add role-based data scoping (learner, parent, instructor, admin views)
+- [ ] Implement performance optimizations (indexes, caching, eager/lazy loading)
+- [ ] Add detailed view endpoint with full lesson data and relations
 - [ ] Apply RBAC filters based on user role and org scope
-- [ ] **Files**: `lesson.controller.ts`, RBAC guards
+- [ ] **Files**: `lesson.controller.ts`, RBAC guards, caching layer
 
 #### **4.4: Implement Lesson Updates (PUT /lessons/:id)**
 - [ ] Add reschedule endpoint with availability recheck
@@ -186,10 +198,13 @@
 - [ ] **Files**: `apps/web/src/components/lessons/LessonBookingForm.tsx`
 
 #### **6.2: Lesson Management Dashboard**
-- [ ] Build lesson list view with filtering
-- [ ] Add lesson detail view with all information
-- [ ] Implement lesson actions (reschedule, cancel)
-- [ ] **Files**: `apps/web/src/components/lessons/LessonDashboard.tsx`
+- [ ] Build lesson list view with filtering (`actorScope`, date ranges, status filters)
+- [ ] Implement pagination controls with performance optimizations
+- [ ] Add role-based views (learner: own lessons, parent: children's lessons, instructor: teaching lessons, admin: all org lessons)
+- [ ] Add lesson detail view with all information and related data
+- [ ] Implement lesson actions (reschedule, cancel) with proper permissions
+- [ ] Add real-time updates for lesson status changes
+- [ ] **Files**: `apps/web/src/components/lessons/LessonDashboard.tsx`, `LessonListView.tsx`, `LessonDetailView.tsx`
 
 #### **6.3: Real-time Updates**
 - [ ] Integrate Socket.IO for live lesson updates
@@ -230,8 +245,11 @@
 
 #### **7.4: Performance Testing**
 - [ ] Test availability query performance
+- [ ] Test lesson list query performance with large datasets
+- [ ] Test pagination performance across different page sizes
 - [ ] Test concurrent booking scenarios
 - [ ] Test database constraint performance
+- [ ] Test caching effectiveness for list/detail views
 - [ ] **Files**: Performance test suites
 
 ---
