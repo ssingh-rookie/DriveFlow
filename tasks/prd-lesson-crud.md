@@ -23,41 +23,41 @@ Actors: **Learner**, **Parent**, **Instructor**, **Admin**.
 
 ```mermaid
 flowchart TB
-  subgraph FE[Frontend (Web/App)]
-    FE_A[Select Instructor/Type/DateTime/Location]
-    FE_B[GET /availability]
-    FE_C[Render available slots]
-    FE_D[POST /lessons]
-    FE_E[Handle payment UI / retry]
-    FE_F[Show confirmation]
-  end
+    subgraph FE["Frontend (Web/App)"]
+        FE_A["Select Instructor/Type/DateTime/Location"]
+        FE_B["GET /availability"]
+        FE_C["Render available slots"]
+        FE_D["POST /lessons"]
+        FE_E["Handle payment UI / retry"]
+        FE_F["Show confirmation"]
+    end
 
-  subgraph BFF[BFF]
-    BFF_A[Validate auth & payload]
-    BFF_B[Forward to Lesson Service]
-  end
+    subgraph BFF["BFF"]
+        BFF_A["Validate auth & payload"]
+        BFF_B["Forward to Lesson Service"]
+    end
 
-  subgraph LES[Lesson Service]
-    LES_A[Validate request]
-    LES_B[Check instructor availability & constraints]
-    LES_C[Create lesson: PendingPayment or Scheduled]
-    LES_D[Emit LessonCreated event]
-  end
+    subgraph LES["Lesson Service"]
+        LES_A["Validate request"]
+        LES_B["Check instructor availability & constraints"]
+        LES_C["Create lesson: PendingPayment or Scheduled"]
+        LES_D["Emit LessonCreated event"]
+    end
 
-  subgraph PAY[Payment Service]
-    PAY_A[Create payment intent]
-    PAY_B[Confirm payment (3DS, etc.)]
-  end
+    subgraph PAY["Payment Service"]
+        PAY_A["Create payment intent"]
+        PAY_B["Confirm payment (3DS, etc.)"]
+    end
 
-  subgraph NOTI[Notification Service]
-    NOTI_A[Send confirmation (email/SMS)]
-  end
+    subgraph NOTI["Notification Service"]
+        NOTI_A["Send confirmation (email/SMS)"]
+    end
 
-  FE_A --> FE_B --> FE_C --> FE_D
-  FE_D --> BFF_A --> BFF_B --> LES_A --> LES_B
-  LES_B -->|available| LES_C --> PAY_A --> PAY_B
-  PAY_B -->|success| NOTI_A --> FE_F
-  PAY_B -->|fail| FE_E --> PAY_B
+    FE_A --> FE_B --> FE_C --> FE_D
+    FE_D --> BFF_A --> BFF_B --> LES_A --> LES_B
+    LES_B -->|available| LES_C --> PAY_A --> PAY_B
+    PAY_B -->|success| NOTI_A --> FE_F
+    PAY_B -->|fail| FE_E --> PAY_B
 ```
 
 ### 2.2 Step‑by‑step (happy path)
@@ -85,39 +85,39 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-  subgraph FE[Frontend]
-    FE_A[Open lesson details]
-    FE_B[Pick new time]
-    FE_C[PUT /lessons/{id}]
-    FE_D[Show updated details]
-  end
+    subgraph FE["Frontend"]
+        FE_A["Open lesson details"]
+        FE_B["Pick new time"]
+        FE_C["PUT /lessons/{id}"]
+        FE_D["Show updated details"]
+    end
 
-  subgraph BFF[BFF]
-    BFF_A[AuthZ: can modify?]
-    BFF_B[Forward to Lesson Service]
-  end
+    subgraph BFF["BFF"]
+        BFF_A["AuthZ: can modify?"]
+        BFF_B["Forward to Lesson Service"]
+    end
 
-  subgraph LES[Lesson Service]
-    LES_A[Fetch lesson + policy]
-    LES_B[Check cutoff window & status]
-    LES_C[Check new availability]
-    LES_D[Update start/end; keep Scheduled]
-    LES_E[Emit LessonRescheduled]
-  end
+    subgraph LES["Lesson Service"]
+        LES_A["Fetch lesson + policy"]
+        LES_B["Check cutoff window & status"]
+        LES_C["Check new availability"]
+        LES_D["Update start/end; keep Scheduled"]
+        LES_E["Emit LessonRescheduled"]
+    end
 
-  subgraph PAY[Payment Service]
-    PAY_A[Create reschedule fee intent]
-    PAY_B[Confirm or waive]
-  end
+    subgraph PAY["Payment Service"]
+        PAY_A["Create reschedule fee intent"]
+        PAY_B["Confirm or waive"]
+    end
 
-  subgraph NOTI[Notification Service]
-    NOTI_A[Notify all parties]
-  end
+    subgraph NOTI["Notification Service"]
+        NOTI_A["Notify all parties"]
+    end
 
-  FE_A --> FE_B --> FE_C --> BFF_A --> BFF_B --> LES_A --> LES_B
-  LES_B -->|fee required| PAY_A --> PAY_B --> LES_C
-  LES_B -->|no fee| LES_C
-  LES_C -->|available| LES_D --> LES_E --> NOTI_A --> FE_D
+    FE_A --> FE_B --> FE_C --> BFF_A --> BFF_B --> LES_A --> LES_B
+    LES_B -->|"fee required"| PAY_A --> PAY_B --> LES_C
+    LES_B -->|"no fee"| LES_C
+    LES_C -->|"available"| LES_D --> LES_E --> NOTI_A --> FE_D
 ```
 
 ### 3.2 Step‑by‑step (happy path)
@@ -143,37 +143,37 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-  subgraph FE[Frontend]
-    FE_A[Open lesson]
-    FE_B[Choose Cancel + reason]
-    FE_C[DELETE /lessons/{id}?actor=x]
-    FE_D[Show result/refund status]
-  end
+    subgraph FE["Frontend"]
+        FE_A["Open lesson"]
+        FE_B["Choose Cancel + reason"]
+        FE_C["DELETE /lessons/{id}?actor=x"]
+        FE_D["Show result/refund status"]
+    end
 
-  subgraph BFF[BFF]
-    BFF_A[AuthZ + enrich actor]
-    BFF_B[Forward to Lesson Service]
-  end
+    subgraph BFF["BFF"]
+        BFF_A["AuthZ + enrich actor"]
+        BFF_B["Forward to Lesson Service"]
+    end
 
-  subgraph LES[Lesson Service]
-    LES_A[Load lesson + policy]
-    LES_B[Is cancellable? cutoff respected?]
-    LES_C[Compute refund/fee]
-    LES_D[Update status=Cancelled, cancelledBy, reason]
-    LES_E[Emit LessonCancelled with refund payload]
-  end
+    subgraph LES["Lesson Service"]
+        LES_A["Load lesson + policy"]
+        LES_B["Is cancellable? cutoff respected?"]
+        LES_C["Compute refund/fee"]
+        LES_D["Update status=Cancelled, cancelledBy, reason"]
+        LES_E["Emit LessonCancelled with refund payload"]
+    end
 
-  subgraph PAY[Payment Service]
-    PAY_A[Issue refund/credit or charge fee]
-    PAY_B[Ack refund/charge]
-  end
+    subgraph PAY["Payment Service"]
+        PAY_A["Issue refund/credit or charge fee"]
+        PAY_B["Ack refund/charge"]
+    end
 
-  subgraph NOTI[Notification Service]
-    NOTI_A[Notify learner/parent/instructor]
-  end
+    subgraph NOTI["Notification Service"]
+        NOTI_A["Notify learner/parent/instructor"]
+    end
 
-  FE_A --> FE_B --> FE_C --> BFF_A --> BFF_B --> LES_A --> LES_B --> LES_C --> LES_D --> LES_E
-  LES_E --> PAY_A --> PAY_B --> NOTI_A --> FE_D
+    FE_A --> FE_B --> FE_C --> BFF_A --> BFF_B --> LES_A --> LES_B --> LES_C --> LES_D --> LES_E
+    LES_E --> PAY_A --> PAY_B --> NOTI_A --> FE_D
 ```
 
 ### 4.2 Policy Matrix (examples)
