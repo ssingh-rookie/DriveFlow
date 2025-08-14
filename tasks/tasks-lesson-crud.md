@@ -112,25 +112,26 @@
 - [ ] Add helper method `buildFilters(user: AuthenticatedUser, query)` for role-based query building
 - [ ] **Files**: `apps/api/src/modules/lessons/lesson.service.ts`
 
-#### **3.3: Implement State Machine & Policy Engine**
-- [ ] Create `LessonStateMachine` service for state transition management
-- [ ] Implement state transition validation with guard conditions
-- [ ] Add auto-progression scheduling for NoShow and payment timeout
-- [ ] Create `PolicyService` for cancellation/reschedule rules
-- [ ] Implement actor-based fee calculation logic
-- [ ] Add cutoff window validation
-- [ ] Create background job for scheduled state transitions
-- [ ] **Files**: `apps/api/src/modules/lessons/state-machine.service.ts`, `policy.service.ts`, `state-transition.job.ts`
+#### **3.3: Implement Basic State Management & Policy Engine** *(Iterative Approach)*
+- [ ] Create `LessonStateMachine` service for basic state validation
+- [ ] Implement core state transitions (requested → confirmed → completed → cancelled)
+- [ ] **MVP**: Manual state transitions only (no auto-progression initially)
+- [ ] Create `PolicyService` for basic cancellation/reschedule rules
+- [ ] Implement simple actor-based fee calculation (flat rates initially)
+- [ ] Add basic cutoff window validation (configurable hours)
+- [ ] **Post-MVP**: Add cron job polling for NoShow detection (simple setInterval)
+- [ ] **Future**: Upgrade to BullMQ when scaling needed
+- [ ] **Files**: `apps/api/src/modules/lessons/state-machine.service.ts`, `policy.service.ts`
 
-#### **3.4: Build Enhanced Availability Service**
-- [ ] Create `AvailabilityService` with comprehensive slot checking
-- [ ] Implement travel buffer calculations between lessons
-- [ ] Add working hours validation (instructor schedules, org hours)
-- [ ] Implement license type compatibility checking
-- [ ] Add basic time-of-day restrictions (daylight hours for learners)
-- [ ] Create availability query optimization with caching
-- [ ] Add location-based availability filtering
-- [ ] **Files**: `apps/api/src/modules/availability/availability.service.ts`, cache utilities
+#### **3.4: Build Basic Availability Service** *(Start Simple, Iterate)*
+- [ ] Create `AvailabilityService` with basic slot checking
+- [ ] **MVP**: Simple overlap detection using database queries
+- [ ] Add basic working hours validation (9am-5pm default)
+- [ ] **MVP**: Fixed buffer time between lessons (15min default)
+- [ ] **Post-MVP**: Add instructor-specific availability windows
+- [ ] **Post-MVP**: Implement dynamic travel buffer calculations
+- [ ] **Future**: Add license type compatibility and location filtering
+- [ ] **Files**: `apps/api/src/modules/lessons/availability.service.ts`
 
 ---
 
@@ -210,24 +211,29 @@
 - [ ] Implement refund logic with pro-rata calculations
 - [ ] **Files**: `apps/api/src/modules/payments/`, payment utilities
 
-#### **5.2: Notification Service Integration**
-- [ ] Create lesson-specific notification templates
-- [ ] Add notification triggers for all lesson events
-- [ ] Implement calendar invite generation (iCal)
-- [ ] **Files**: Notification templates, messaging service
+#### **5.2: Basic Notification Integration** *(Simple REST First)*
+- [ ] **MVP**: Direct database inserts to `Message` table for notifications
+- [ ] Create basic lesson notification templates (email only initially)
+- [ ] Add notification triggers for core lesson events (created, cancelled)
+- [ ] **Post-MVP**: Add SMS notifications
+- [ ] **Future**: Add real-time Socket.IO notifications
+- [ ] **Files**: Message service utilities, email templates
 
-#### **5.3: Outbox Event Patterns**
-- [ ] Create `LessonCreated`, `LessonRescheduled`, `LessonCancelled` events
-- [ ] Implement reliable event publishing to outbox
-- [ ] Add event consumers for downstream processing
-- [ ] **Files**: Event definitions, outbox handlers
+#### **5.3: Simple Event Patterns** *(REST-Based Initially)*
+- [ ] **MVP**: Direct database logging of lesson events to `AuditLog`
+- [ ] Create basic `LessonCreated`, `LessonCancelled` event handlers
+- [ ] **MVP**: Synchronous event processing in same transaction
+- [ ] **Post-MVP**: Add `Outbox` table integration for reliability
+- [ ] **Future**: Add async event consumers and external integrations
+- [ ] **Files**: Event utilities, audit logging
 
-#### **5.4: Background Jobs & State Management**
-- [ ] Create scheduled jobs for state transitions (NoShow, payment timeout)
-- [ ] Implement retry logic for failed state transitions
-- [ ] Add monitoring and alerting for state management system
-- [ ] Create cleanup jobs for expired draft lessons
-- [ ] **Files**: Background job scheduler, monitoring utilities
+#### **5.4: Simple State Management** *(Polling-Based Initially)*
+- [ ] **MVP**: Create simple cron service with `setInterval` polling
+- [ ] Add basic NoShow detection (check lessons 30min after end time)
+- [ ] **MVP**: Simple retry logic with exponential backoff
+- [ ] **Post-MVP**: Add worker app with BullMQ for production
+- [ ] **Future**: Add monitoring, alerting, and complex job scheduling
+- [ ] **Files**: Simple cron service, state polling utilities
 
 ---
 
@@ -251,11 +257,13 @@
 - [ ] Add real-time updates for lesson status changes
 - [ ] **Files**: `apps/web/src/components/lessons/LessonDashboard.tsx`, `LessonListView.tsx`, `LessonDetailView.tsx`
 
-#### **6.3: Real-time Updates**
-- [ ] Integrate Socket.IO for live lesson updates
-- [ ] Add notification handling for lesson events
+#### **6.3: Basic Updates & State Management** *(REST-First Approach)*
+- [ ] **MVP**: Use standard REST API calls with periodic refresh
 - [ ] Implement optimistic updates with TanStack Query
-- [ ] **Files**: Socket integration, React hooks
+- [ ] Add basic notification banners for lesson status changes
+- [ ] **Post-MVP**: Add polling for live updates (30s intervals)
+- [ ] **Future**: Integrate Socket.IO for real-time updates
+- [ ] **Files**: React hooks, notification components
 
 #### **6.4: Mobile App Enhancement**
 - [ ] Add lesson management screens to React Native app
@@ -388,29 +396,36 @@
 
 ---
 
-## 🎯 **MVP vs Post-MVP Scope**
+## 🎯 **MVP vs Post-MVP Scope** *(Risk-Mitigated Approach)*
 
-### **MVP Core Requirements (Must Have)**
-- ✅ **State Management Engine**: Complete lesson lifecycle with auto-transitions
-- ✅ **Enhanced Availability Service**: Travel buffers, working hours, license validation  
-- ✅ **RBAC Integration**: Role-based access with scoped permissions
-- ✅ **Basic Payment Flow**: Create, reschedule fees, cancellation refunds
-- ✅ **Core CRUD Operations**: Create, read, update, cancel lessons
-- ✅ **Audit Trail**: Full state transition and action logging
+### **MVP Core Requirements (Must Have)** *(Simple, Working First)*
+- ✅ **Basic State Management**: Manual state transitions, simple validation
+- ✅ **Simple Availability Service**: Basic slot checking with fixed buffers  
+- ✅ **RBAC Integration**: Role-based access with existing scoped permissions
+- ✅ **Basic Payment Flow**: Create, simple reschedule fees, basic refunds
+- ✅ **Core CRUD Operations**: Create, read, update, cancel lessons (REST-based)
+- ✅ **Basic Audit Trail**: Direct logging to AuditLog table
 
-### **Post-MVP Enhancements (Future Iterations)**
-- 🔄 **Advanced Payment Scenarios**: 3D Secure, split payments, complex refund scenarios
-- 🔄 **Real-time Features**: Socket.IO, calendar integration, push notifications
+### **Post-MVP Enhancements (Iterative Improvements)**
+- 🔄 **Enhanced State Management**: Auto-transitions, BullMQ, complex workflows
+- 🔄 **Advanced Availability**: Travel buffers, license validation, location filtering
+- 🔄 **Real-time Features**: Socket.IO, live updates, push notifications
+- 🔄 **Advanced Payment Scenarios**: 3D Secure, split payments, complex refunds
 - 🔄 **Mobile GPS Integration**: Lesson tracking, check-in/out, location validation
 - 🔄 **Performance Optimizations**: Advanced caching, query optimization, scalability
-- 🔄 **Advanced RBAC Edge Cases**: Dynamic role changes, permission escalation prevention
-- 🔄 **External Integrations**: Weather API, Maps API traffic data, advanced geocoding
 
-### **Implementation Priority**
-1. **Phase 1-4**: MVP Core (State Management + Availability + RBAC + Basic Payments)
-2. **Phase 5-6**: Frontend integration with MVP backend
-3. **Phase 7**: Testing and quality assurance for MVP
-4. **Future Phases**: Post-MVP enhancements based on user feedback
+### **Future Enhancements (Scale & Polish)**
+- 🚀 **External Integrations**: Weather API, Maps API, advanced geocoding
+- 🚀 **Advanced RBAC Edge Cases**: Dynamic roles, permission escalation prevention
+- 🚀 **Enterprise Features**: Multi-region, advanced analytics, integrations
+
+### **Implementation Strategy** *(Mitigation-Focused)*
+1. **Phase 1-2**: Database + Contracts (solid foundation)
+2. **Phase 3**: Basic services (simple implementations that work)
+3. **Phase 4**: REST APIs with existing RBAC (leverage what works)
+4. **Phase 5**: Basic frontend (standard patterns)
+5. **Phase 6**: Testing (ensure MVP works reliably)
+6. **Phase 7+**: Iterative enhancements based on usage
 
 ---
 
