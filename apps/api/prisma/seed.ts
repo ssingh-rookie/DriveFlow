@@ -114,6 +114,142 @@ async function main() {
     });
   }
 
+  // Add default cancellation policies
+  const cancellationPolicies = [
+    {
+      actor: 'student' as const,
+      hoursBeforeStart: 24,
+      refundPercentage: 100,
+      feeCents: 0,
+      description: 'Students: 24+ hours before = full refund'
+    },
+    {
+      actor: 'student' as const,
+      hoursBeforeStart: 2,
+      refundPercentage: 50,
+      feeCents: 0,
+      description: 'Students: 2-24 hours before = 50% refund'
+    },
+    {
+      actor: 'student' as const,
+      hoursBeforeStart: 0,
+      refundPercentage: 0,
+      feeCents: 0,
+      description: 'Students: <2 hours before = no refund'
+    },
+    {
+      actor: 'parent' as const,
+      hoursBeforeStart: 24,
+      refundPercentage: 100,
+      feeCents: 0,
+      description: 'Parents: 24+ hours before = full refund'
+    },
+    {
+      actor: 'parent' as const,
+      hoursBeforeStart: 2,
+      refundPercentage: 50,
+      feeCents: 0,
+      description: 'Parents: 2-24 hours before = 50% refund'
+    },
+    {
+      actor: 'instructor' as const,
+      hoursBeforeStart: 0,
+      refundPercentage: 100,
+      feeCents: 0,
+      description: 'Instructors: full refund anytime + priority rebooking'
+    },
+    {
+      actor: 'admin' as const,
+      hoursBeforeStart: 0,
+      refundPercentage: 100,
+      feeCents: 0,
+      description: 'Admin: override any policy with reason'
+    }
+  ];
+
+  for (const policy of cancellationPolicies) {
+    await db.cancellationPolicy.create({
+      data: {
+        orgId: org.id,
+        ...policy
+      }
+    });
+  }
+
+  // Add default state transition rules
+  const stateTransitionRules = [
+    // Student transitions
+    {
+      fromStatus: 'draft' as const,
+      toStatus: 'pending_payment' as const,
+      requiredRole: 'student' as const,
+      description: 'Students can submit payment for draft bookings'
+    },
+    {
+      fromStatus: 'confirmed' as const,
+      toStatus: 'cancelled' as const,
+      requiredRole: 'student' as const,
+      description: 'Students can cancel confirmed bookings (with policy restrictions)',
+      conditions: { applyCancellationPolicy: true }
+    },
+    // Instructor transitions
+    {
+      fromStatus: 'confirmed' as const,
+      toStatus: 'in_progress' as const,
+      requiredRole: 'instructor' as const,
+      description: 'Instructors can start confirmed lessons'
+    },
+    {
+      fromStatus: 'in_progress' as const,
+      toStatus: 'completed' as const,
+      requiredRole: 'instructor' as const,
+      description: 'Instructors can complete in-progress lessons'
+    },
+    {
+      fromStatus: 'confirmed' as const,
+      toStatus: 'cancelled' as const,
+      requiredRole: 'instructor' as const,
+      description: 'Instructors can cancel with full refund'
+    },
+    // Admin/Owner transitions (can do anything)
+    {
+      fromStatus: null,
+      toStatus: 'cancelled' as const,
+      requiredRole: 'admin' as const,
+      description: 'Admins can cancel any booking'
+    },
+    {
+      fromStatus: null,
+      toStatus: 'confirmed' as const,
+      requiredRole: 'owner' as const,
+      description: 'Owners can directly confirm any booking'
+    },
+    // System transitions
+    {
+      fromStatus: 'pending_payment' as const,
+      toStatus: 'cancelled' as const,
+      requiredRole: null,
+      description: 'System auto-cancel after payment timeout',
+      conditions: { systemTransition: true, timeoutMinutes: 30 }
+    },
+    {
+      fromStatus: 'confirmed' as const,
+      toStatus: 'no_show' as const,
+      requiredRole: null,
+      description: 'System auto-detect NoShow after grace period',
+      conditions: { systemTransition: true, graceMinutes: 15 }
+    }
+  ];
+
+  for (const rule of stateTransitionRules) {
+    await db.stateTransitionRule.create({
+      data: {
+        orgId: org.id,
+        ...rule
+      }
+    });
+  }
+
   console.log('✅ Database seeded successfully!');
   console.log({ 
     org: org.name, 

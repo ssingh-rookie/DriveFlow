@@ -20,25 +20,25 @@
 ### **Sub-Tasks:**
 
 #### **1.1: Add Cancellation Policy Support**
-- [ ] Create `CancellationPolicy` model for configurable rules
-- [ ] Add policy fields to support actor-based refund matrices
-- [ ] Link policies to organizations for multi-tenant rules
-- [ ] **Files**: `schema.prisma`, new migration
+- [x] Create `CancellationPolicy` model for configurable rules
+- [x] Add policy fields to support actor-based refund matrices
+- [x] Link policies to organizations for multi-tenant rules
+- [x] **Files**: `schema.prisma`, new migration
 
 #### **1.2: Enhance Booking Model for Advanced Workflows**
-- [ ] Add `cancelledBy`, `cancelledAt`, `cancellationReason` fields
-- [ ] Add `rescheduledFrom`, `rescheduledAt`, `rescheduleReason` fields
-- [ ] Add `idempotencyKey` field for duplicate prevention
-- [ ] Add state transition tracking fields (`previousStatus`, `statusChangedAt`, `statusChangedBy`)
-- [ ] **Files**: `schema.prisma`, new migration
+- [x] Add `cancelledBy`, `cancelledAt`, `cancellationReason` fields
+- [x] Add `rescheduledFrom`, `rescheduledAt`, `rescheduleReason` fields
+- [x] Add `idempotencyKey` field for duplicate prevention
+- [x] Add state transition tracking fields (`previousStatus`, `statusChangedAt`, `statusChangedBy`)
+- [x] **Files**: `schema.prisma`, new migration
 
 #### **1.3: Add State Management & Audit Trail**
-- [ ] Create `LessonStateHistory` table for state transition tracking
-- [ ] Add `ScheduledStateTransition` table for auto-progression (NoShow, payment timeout)
-- [ ] Create state machine configuration table (`StateTransitionRules`)
-- [ ] Enhance existing `AuditLog` to capture state transitions with context
-- [ ] Add database constraints for state transition validation
-- [ ] **Files**: `schema.prisma`, new migrations, audit utilities
+- [x] Create `LessonStateHistory` table for state transition tracking
+- [x] Add `ScheduledStateTransition` table for auto-progression (NoShow, payment timeout)
+- [x] Create state machine configuration table (`StateTransitionRules`)
+- [x] Enhance existing `AuditLog` to capture state transitions with context
+- [x] Add database constraints for state transition validation
+- [x] **Files**: `schema.prisma`, new migrations, audit utilities
 
 #### **1.4: Add Availability & Constraint Tables**
 - [ ] Create `InstructorWorkingHours` table for scheduling windows

@@ -16,44 +16,52 @@ enum OrgRole {
 }
 
 model Org {
-  id          String       @id @default(uuid())
-  name        String
-  abn         String?
-  timeZone    String       @default("Australia/Sydney")
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  abn       String?
+  timeZone  String   @default("Australia/Sydney")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  users       UserOrg[]
-  instructors Instructor[]
-  students    Student[]
-  services    Service[]
-  rateCards   RateCard[]
-  bookings    Booking[]
-  lessons     Lesson[]
-  messages    Message[]
-  payments    Payment[]
-  payouts     Payout[]
-  auditLogs   AuditLog[]
-  instructorAvailabilities InstructorAvailability[]
-  availabilityExceptions   AvailabilityException[]
+  users                      UserOrg[]
+  instructors                Instructor[]
+  students                   Student[]
+  services                   Service[]
+  rateCards                  RateCard[]
+  bookings                   Booking[]
+  lessons                    Lesson[]
+  messages                   Message[]
+  payments                   Payment[]
+  payouts                    Payout[]
+  auditLogs                  AuditLog[]
+  instructorAvailabilities   InstructorAvailability[]
+  availabilityExceptions     AvailabilityException[]
+  cancellationPolicies       CancellationPolicy[]
+  lessonStateHistories       LessonStateHistory[]
+  scheduledStateTransitions  ScheduledStateTransition[]
+  stateTransitionRules       StateTransitionRule[]
+  instructorWorkingHours     InstructorWorkingHours[]
+  travelTimeCache            TravelTimeCache[]
+  licenseCompatibilityMatrix LicenseCompatibilityMatrix[]
 
   @@index([name])
 }
 
 model User {
-  id          String     @id @default(uuid())
-  email       String     @unique
-  fullName    String
-  phone       String?
-  password    String?    // bcrypt hashed password
-  externalId  String?    @unique // from Clerk/Auth0, etc.
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id         String   @id @default(uuid())
+  email      String   @unique
+  fullName   String
+  phone      String?
+  password   String? // bcrypt hashed password
+  externalId String?  @unique // from Clerk/Auth0, etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  orgs          UserOrg[]
-  instructors   Instructor[]
-  auditLogs     AuditLog[]
-  refreshTokens RefreshToken[]
+  orgs               UserOrg[]
+  instructors        Instructor[]
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
+  lessonStateChanges LessonStateHistory[]
 }
 
 model UserOrg {
@@ -63,8 +71,8 @@ model UserOrg {
   role      OrgRole
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@unique([userId, orgId, role])
   @@index([orgId, role])
@@ -72,76 +80,77 @@ model UserOrg {
 
 // Step 3 — People: Instructors, Students, Guardians
 model Instructor {
-  id               String   @id @default(uuid())
-  orgId            String
-  userId           String?
-  displayName      String
-  phone            String?
-  licenseId        String?
-  active           Boolean  @default(true)
+  id          String  @id @default(uuid())
+  orgId       String
+  userId      String?
+  displayName String
+  phone       String?
+  licenseId   String?
+  active      Boolean @default(true)
 
-  stripeAccountId        String?  @unique
-  stripeOnboardingStatus String   @default("not_started")
+  stripeAccountId        String?   @unique
+  stripeOnboardingStatus String    @default("not_started")
   stripeCapabilities     Json?
   stripeRequirementsDue  Json?
   stripeConnectedAt      DateTime?
   stripeDisconnectedAt   DateTime?
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org              Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  org  Org   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  availabilities   InstructorAvailability[]
+  availabilities         InstructorAvailability[]
   availabilityExceptions AvailabilityException[]
-  bookings         Booking[]
-  lessons          Lesson[]
-  payouts          Payout[]
+  workingHours           InstructorWorkingHours[]
+  bookings               Booking[]
+  lessons                Lesson[]
+  payouts                Payout[]
 
   @@index([orgId, active])
 }
 
 model Student {
-  id         String    @id @default(uuid())
-  orgId      String
-  fullName   String
-  phone      String?
-  email      String?
-  dob        DateTime?
-  notes      String?
+  id       String    @id @default(uuid())
+  orgId    String
+  fullName String
+  phone    String?
+  email    String?
+  dob      DateTime?
+  notes    String?
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org        Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  guardians  StudentGuardian[]
-  bookings   Booking[]
-  lessons    Lesson[]
+  org       Org               @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  guardians StudentGuardian[]
+  bookings  Booking[]
+  lessons   Lesson[]
 
   @@index([orgId, fullName])
 }
 
 model Guardian {
-  id         String    @id @default(uuid())
-  fullName   String
-  phone      String?
-  email      String?
+  id       String  @id @default(uuid())
+  fullName String
+  phone    String?
+  email    String?
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  students   StudentGuardian[]
+  students StudentGuardian[]
 }
 
 model StudentGuardian {
-  id         String   @id @default(uuid())
+  id         String  @id @default(uuid())
   studentId  String
   guardianId String
   relation   String?
 
-  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  guardian   Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardian Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, guardianId])
 }
@@ -153,55 +162,55 @@ model Service {
   name        String
   description String?
   durationMin Int
-  active      Boolean  @default(true)
+  active      Boolean @default(true)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  rateItems   RateCardItem[]
-  bookings    Booking[]
+  org       Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  rateItems RateCardItem[]
+  bookings  Booking[]
 
-  @@index([orgId, active])
   @@unique([orgId, name])
+  @@index([orgId, active])
 }
 
 model RateCard {
-  id          String   @id @default(uuid())
-  orgId       String
-  name        String
-  currency    String   @default("AUD")
-  isDefault   Boolean  @default(false)
-  validFrom   DateTime?
-  validTo     DateTime?
+  id        String    @id @default(uuid())
+  orgId     String
+  name      String
+  currency  String    @default("AUD")
+  isDefault Boolean   @default(false)
+  validFrom DateTime?
+  validTo   DateTime?
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org         Org       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  items       RateCardItem[]
+  org   Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  items RateCardItem[]
 
-  @@index([orgId, isDefault])
   @@unique([orgId, name])
+  @@index([orgId, isDefault])
 }
 
 model RateCardItem {
-  id          String   @id @default(uuid())
-  rateCardId  String
-  serviceId   String
-  priceCents  Int      // integer cents
+  id         String @id @default(uuid())
+  rateCardId String
+  serviceId  String
+  priceCents Int // integer cents
 
-  createdAt   DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  rateCard    RateCard  @relation(fields: [rateCardId], references: [id], onDelete: Cascade)
-  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  rateCard RateCard @relation(fields: [rateCardId], references: [id], onDelete: Cascade)
+  service  Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   @@unique([rateCardId, serviceId])
 }
 
 // Step 5 — Availability (Recurring + Exceptions)
 model InstructorAvailability {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   orgId         String
   instructorId  String
   dayOfWeek     Int
@@ -210,11 +219,11 @@ model InstructorAvailability {
   effectiveFrom DateTime?
   effectiveTo   DateTime?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org           Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  instructor    Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   @@index([orgId, instructorId, dayOfWeek])
 }
@@ -227,118 +236,235 @@ model AvailabilityException {
   isAvailable  Boolean
   note         String?
 
-  createdAt    DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  org          Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   @@unique([instructorId, date])
   @@index([orgId])
 }
 
+// Step 5.5 — Enhanced Availability System
+model InstructorWorkingHours {
+  id               String    @id @default(uuid())
+  orgId            String
+  instructorId     String
+  dayOfWeek        Int // 0-6 (Sunday-Saturday)
+  startTime        String // HH:mm format (e.g., "09:00")
+  endTime          String // HH:mm format (e.g., "17:00")
+  breakStartTime   String? // Optional lunch break start
+  breakEndTime     String? // Optional lunch break end
+  maxLessonsPerDay Int? // Daily lesson limit
+  travelBufferMin  Int       @default(15) // Minutes between lessons
+  isActive         Boolean   @default(true)
+  effectiveFrom    DateTime?
+  effectiveTo      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, instructorId, dayOfWeek, effectiveFrom])
+  @@index([instructorId, dayOfWeek, isActive])
+  @@index([orgId, isActive])
+}
+
+model TravelTimeCache {
+  id               String  @id @default(uuid())
+  orgId            String
+  fromLocationHash String // Hash of pickup location
+  toLocationHash   String // Hash of dropoff location
+  fromLat          Decimal @db.Decimal(9, 6)
+  fromLng          Decimal @db.Decimal(9, 6)
+  toLat            Decimal @db.Decimal(9, 6)
+  toLng            Decimal @db.Decimal(9, 6)
+
+  // Cached travel time data
+  drivingTimeMin    Int // Base driving time in minutes
+  trafficMultiplier Decimal @default(1.0) @db.Decimal(3, 2) // Traffic adjustment (1.0 = no traffic, 1.5 = 50% slower)
+  distanceMeters    Int // Driving distance in meters
+
+  // Time-based variations
+  peakHourMultiplier Decimal @default(1.2) @db.Decimal(3, 2) // Rush hour adjustment
+  timeOfDayFactors   Json? // Hourly multipliers for different times
+
+  // Cache metadata
+  lastUpdated     DateTime @default(now())
+  cacheValidUntil DateTime // When this cache expires
+  source          String   @default("google_maps") // API source used
+  reliability     String   @default("high") // high, medium, low
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, fromLocationHash, toLocationHash])
+  @@index([orgId, cacheValidUntil])
+  @@index([fromLocationHash, toLocationHash])
+}
+
+model LicenseCompatibilityMatrix {
+  id                   String  @id @default(uuid())
+  orgId                String
+  studentLicenseType   String // e.g., "learner", "provisional_p1", "provisional_p2", "full"
+  lessonType           String // e.g., "standard", "highway", "night", "manual", "automatic"
+  instructorLicenseReq String // Required instructor certification
+  isCompatible         Boolean
+  minStudentAge        Int? // Age requirement for this combination
+  maxStudentAge        Int? // Maximum age (if applicable)
+  prerequisites        Json? // Required previous lessons or skills
+  restrictions         Json? // Time, location, or condition restrictions
+
+  // Business rules
+  minLessonDuration       Int? // Minimum lesson length for this type
+  maxLessonDuration       Int? // Maximum lesson length
+  requiresParentalConsent Boolean @default(false)
+  isActive                Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, studentLicenseType, lessonType])
+  @@index([orgId, isActive])
+  @@index([studentLicenseType, lessonType])
+}
+
 // Step 6 — Bookings & Lessons
 enum BookingStatus {
-  requested
-  confirmed
-  in_progress
-  completed
-  cancelled
-  no_show
+  draft // Initial lesson creation (not yet requested)
+  pending_payment // Requested but payment processing
+  requested // Legacy: keeping for backwards compatibility  
+  confirmed // Payment confirmed, lesson scheduled
+  scheduled // Alias for confirmed (PRD alignment)
+  in_progress // Lesson currently happening
+  completed // Lesson finished successfully
+  cancelled // Cancelled by student/instructor/admin
+  no_show // Student didn't show up (auto-detected)
 }
 
 model Booking {
-  id                   String   @id @default(uuid())
-  orgId                String
-  studentId            String
-  instructorId         String
-  serviceId            String
+  id           String @id @default(uuid())
+  orgId        String
+  studentId    String
+  instructorId String
+  serviceId    String
 
-  startAt              DateTime
-  endAt                DateTime
+  startAt DateTime
+  endAt   DateTime
 
-  status               BookingStatus @default(requested)
+  status BookingStatus @default(requested)
 
-  pickupAddress        String?
-  pickupLat            Decimal?  @db.Decimal(9, 6)
-  pickupLng            Decimal?  @db.Decimal(9, 6)
-  dropoffAddress       String?
-  dropoffLat           Decimal?  @db.Decimal(9, 6)
-  dropoffLng           Decimal?  @db.Decimal(9, 6)
+  pickupAddress  String?
+  pickupLat      Decimal? @db.Decimal(9, 6)
+  pickupLng      Decimal? @db.Decimal(9, 6)
+  dropoffAddress String?
+  dropoffLat     Decimal? @db.Decimal(9, 6)
+  dropoffLng     Decimal? @db.Decimal(9, 6)
 
-  currency             String   @default("AUD")
+  currency             String @default("AUD")
   priceCents           Int
   platformFeeCents     Int
   instructorShareCents Int
 
-  notes                String?
+  notes String?
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  // Cancellation tracking
+  cancelledBy        String? // userId who cancelled
+  cancelledAt        DateTime?
+  cancellationReason String?
 
-  org                  Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  student              Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  instructor           Instructor @relation(fields: [instructorId], references: [id], onDelete: Restrict)
-  service              Service    @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  // Rescheduling tracking  
+  rescheduledFrom  DateTime? // Original startAt if rescheduled
+  rescheduledAt    DateTime? // When the reschedule occurred
+  rescheduleReason String? // Why it was rescheduled
+
+  // State transition tracking
+  previousStatus  BookingStatus?
+  statusChangedAt DateTime?      @default(now())
+  statusChangedBy String? // userId who changed status
+
+  // Idempotency for duplicate prevention
+  idempotencyKey String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org                  Org                        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  student              Student                    @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  instructor           Instructor                 @relation(fields: [instructorId], references: [id], onDelete: Restrict)
+  service              Service                    @relation(fields: [serviceId], references: [id], onDelete: Restrict)
   lesson               Lesson?
   payment              Payment?
   payouts              Payout[]
+  stateHistory         LessonStateHistory[]
+  scheduledTransitions ScheduledStateTransition[]
 
   @@index([orgId, startAt])
   @@index([instructorId, startAt])
   @@index([studentId, startAt])
+  @@index([status, statusChangedAt])
+  @@index([orgId, status])
+  @@index([cancelledBy])
+  @@index([statusChangedBy])
 }
 
 model Lesson {
-  id             String   @id @default(uuid())
-  orgId          String
-  bookingId      String   @unique
-  instructorId   String
-  studentId      String
-  startedAt      DateTime?
-  endedAt        DateTime?
-  rating         Int?
-  notes          String?
+  id           String    @id @default(uuid())
+  orgId        String
+  bookingId    String    @unique
+  instructorId String
+  studentId    String
+  startedAt    DateTime?
+  endedAt      DateTime?
+  rating       Int?
+  notes        String?
 
   distanceMeters Int?
   durationSec    Int?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org            Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  booking        Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  instructor     Instructor @relation(fields: [instructorId], references: [id], onDelete: Restrict)
-  student        Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  booking    Booking    @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Restrict)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Restrict)
 
-  trips          Trip[]
+  trips Trip[]
 }
 
 // Step 7 — GPS Tracking (MVP Simple, PostGIS-Ready)
 model Trip {
-  id         String   @id @default(uuid())
-  lessonId   String
-  startedAt  DateTime
-  endedAt    DateTime?
+  id        String    @id @default(uuid())
+  lessonId  String
+  startedAt DateTime
+  endedAt   DateTime?
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  lesson     Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  points     TripPoint[]
+  lesson Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  points TripPoint[]
 
   @@index([lessonId])
 }
 
 model TripPoint {
-  id         String   @id @default(uuid())
-  tripId     String
-  ts         DateTime
-  lat        Decimal  @db.Decimal(9, 6)
-  lng        Decimal  @db.Decimal(9, 6)
-  speedKph   Decimal? @db.Decimal(6, 2)
+  id       String   @id @default(uuid())
+  tripId   String
+  ts       DateTime
+  lat      Decimal  @db.Decimal(9, 6)
+  lng      Decimal  @db.Decimal(9, 6)
+  speedKph Decimal? @db.Decimal(6, 2)
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@index([tripId, ts])
 }
@@ -352,11 +478,11 @@ enum PaymentStatus {
 }
 
 model Payment {
-  id                   String   @id @default(uuid())
+  id                   String        @id @default(uuid())
   orgId                String
-  bookingId            String   @unique
+  bookingId            String        @unique
   status               PaymentStatus @default(intent_created)
-  currency             String   @default("AUD")
+  currency             String        @default("AUD")
   amountCents          Int
   platformFeeCents     Int
   instructorShareCents Int
@@ -365,30 +491,30 @@ model Payment {
   stripeChargeId        String?
   stripeRefundId        String?
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org                  Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  booking              Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  org     Org     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@index([orgId, status])
 }
 
 model Payout {
-  id                String   @id @default(uuid())
-  orgId             String
-  instructorId      String
-  bookingId         String?
-  currency          String   @default("AUD")
-  amountCents       Int
-  status            String   @default("pending") // 'paid','pending','canceled', etc.
-  stripeTransferId  String?  @unique
+  id               String  @id @default(uuid())
+  orgId            String
+  instructorId     String
+  bookingId        String?
+  currency         String  @default("AUD")
+  amountCents      Int
+  status           String  @default("pending") // 'paid','pending','canceled', etc.
+  stripeTransferId String? @unique
 
-  createdAt         DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  org               Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  instructor        Instructor @relation(fields: [instructorId], references: [id], onDelete: Restrict)
-  booking           Booking?   @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  org        Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  instructor Instructor @relation(fields: [instructorId], references: [id], onDelete: Restrict)
+  booking    Booking?   @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@index([orgId, instructorId])
 }
@@ -407,24 +533,24 @@ enum MessageStatus {
 }
 
 model Message {
-  id           String         @id @default(uuid())
-  orgId        String
-  toAddress    String
-  channel      MessageChannel
-  templateKey  String
-  subject      String?
-  body         String?
-  providerId   String?
-  status       MessageStatus  @default(queued)
-  error        String?
+  id          String         @id @default(uuid())
+  orgId       String
+  toAddress   String
+  channel     MessageChannel
+  templateKey String
+  subject     String?
+  body        String?
+  providerId  String?
+  status      MessageStatus  @default(queued)
+  error       String?
 
-  relatedType  String?
-  relatedId    String?
+  relatedType String?
+  relatedId   String?
 
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  org          Org            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   @@index([orgId, channel, status])
   @@index([relatedType, relatedId])
@@ -432,64 +558,156 @@ model Message {
 
 // Step 10 — Webhooks (Inbound) & Outbox (Internal)
 model WebhookEvent {
-  id          String   @id @default(uuid())
-  provider    String   // 'stripe'
+  id          String    @id @default(uuid())
+  provider    String // 'stripe'
   eventType   String
-  eventId     String   @unique
+  eventId     String    @unique
   payload     Json
   processedAt DateTime?
 
-  receivedAt  DateTime @default(now())
+  receivedAt DateTime @default(now())
 
   @@index([provider, processedAt])
 }
 
 model Outbox {
-  id          String   @id @default(uuid())
-  topic       String   // e.g., 'booking.created'
+  id          String    @id @default(uuid())
+  topic       String // e.g., 'booking.created'
   payload     Json
-  attempts    Int      @default(0)
+  attempts    Int       @default(0)
   lastError   String?
   processedAt DateTime?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([topic, processedAt])
 }
 
 // Step 11 — Audit Log (Who did what)
 model AuditLog {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   orgId       String
   actorUserId String?
-  action      String    // e.g., 'BOOKING_UPDATED'
-  entityType  String    // 'Booking'|'Lesson'|...
+  action      String // e.g., 'BOOKING_UPDATED'
+  entityType  String // 'Booking'|'Lesson'|...
   entityId    String
   before      Json?
   after       Json?
   ip          String?
 
-  createdAt   DateTime  @default(now())
+  createdAt DateTime @default(now())
 
-  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  actor       User?    @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  org   Org   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([orgId, entityType, entityId])
   @@index([actorUserId])
 }
 
+// Step 12 — Cancellation Policy (Actor-based rules)
+enum CancellationActor {
+  student
+  parent
+  instructor
+  admin
+}
+
+model CancellationPolicy {
+  id               String            @id @default(uuid())
+  orgId            String
+  actor            CancellationActor
+  hoursBeforeStart Int // Cutoff window (e.g., 24 hours)
+  refundPercentage Int               @default(100) // 0-100%
+  feeCents         Int               @default(0) // Fixed fee in cents
+  isActive         Boolean           @default(true)
+  description      String? // Human-readable description
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, actor, hoursBeforeStart])
+  @@index([orgId, actor, isActive])
+}
+
+// Step 13 — State Management & Audit Trail
+model LessonStateHistory {
+  id          String         @id @default(uuid())
+  orgId       String
+  bookingId   String
+  fromStatus  BookingStatus? // null for initial creation
+  toStatus    BookingStatus
+  actorUserId String? // who made the change
+  reason      String? // why the change was made
+  metadata    Json? // additional context (timestamps, fees, etc.)
+
+  createdAt DateTime @default(now())
+
+  org     Org     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  actor   User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([orgId, bookingId])
+  @@index([bookingId, createdAt])
+  @@index([toStatus, createdAt])
+}
+
+model ScheduledStateTransition {
+  id        String        @id @default(uuid())
+  orgId     String
+  bookingId String
+  toStatus  BookingStatus
+  executeAt DateTime // when to execute this transition
+  reason    String // why this transition is scheduled
+  metadata  Json? // business rules context
+
+  attempts    Int       @default(0)
+  lastError   String?
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org     Org     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([executeAt, processedAt])
+  @@index([orgId, processedAt])
+  @@index([bookingId])
+}
+
+model StateTransitionRule {
+  id           String         @id @default(uuid())
+  orgId        String
+  fromStatus   BookingStatus? // null = any status
+  toStatus     BookingStatus
+  requiredRole OrgRole? // null = any role
+  conditions   Json? // business rule conditions
+  isActive     Boolean        @default(true)
+  description  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, fromStatus, toStatus, requiredRole])
+  @@index([orgId, isActive])
+}
+
 // Authentication & Security
 model RefreshToken {
-  id          String   @id @default(uuid())
-  userId      String
-  jti         String   @unique // JWT ID for this refresh token
-  rotationId  String   // Groups tokens in the same rotation chain
-  tokenHash   String   // Hashed refresh token value
-  used        Boolean  @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  userId     String
+  jti        String   @unique // JWT ID for this refresh token
+  rotationId String // Groups tokens in the same rotation chain
+  tokenHash  String // Hashed refresh token value
+  used       Boolean  @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([jti])
