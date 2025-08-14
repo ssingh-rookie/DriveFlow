@@ -3,9 +3,10 @@ import { z } from 'zod';
 
 extendZodWithOpenApi(z);
 
-// ===== Export Auth Schemas =====
+// ===== Export All Schemas =====
 export * from './auth';
 export * from './payments';
+export * from './lessons';
 
 // Import auth schemas for OpenAPI registration
 import {
@@ -26,6 +27,25 @@ import {
   PermissionResponseDto,
 } from './auth/permission.schemas';
 import { StripeConnectLinkDto, PayoutReadinessDto } from './payments';
+import {
+  CreateLessonSchema,
+  UpdateLessonSchema,
+  CancelLessonSchema,
+  LessonQuerySchema,
+  LessonDto,
+  LessonSummaryDto,
+  LessonDetailsDto,
+  LessonListResponseDto,
+  LessonStatusTransitionDto,
+  LessonValidationErrorDto,
+  LessonConflictErrorDto,
+  AvailabilityCheckRequest,
+  AvailabilityCheckResponse,
+  RefundCalculationRequest,
+  RefundCalculationResponse,
+  AuditTrailSearchRequest,
+  AuditTrailSearchResponse
+} from './lessons';
 
 /** ===== Example schemas (replace with real ones) ===== */
 export const BookingCreate = z.object({
@@ -65,6 +85,25 @@ registry.register('PermissionCheckDto', PermissionCheckDto);
 registry.register('PermissionResponseDto', PermissionResponseDto);
 registry.register('StripeConnectLinkDto', StripeConnectLinkDto);
 registry.register('PayoutReadinessDto', PayoutReadinessDto);
+
+// Register lesson schemas
+registry.register('CreateLessonSchema', CreateLessonSchema);
+registry.register('UpdateLessonSchema', UpdateLessonSchema);
+registry.register('CancelLessonSchema', CancelLessonSchema);
+registry.register('LessonQuerySchema', LessonQuerySchema);
+registry.register('LessonDto', LessonDto);
+registry.register('LessonSummaryDto', LessonSummaryDto);
+registry.register('LessonDetailsDto', LessonDetailsDto);
+registry.register('LessonListResponseDto', LessonListResponseDto);
+registry.register('LessonStatusTransitionDto', LessonStatusTransitionDto);
+registry.register('LessonValidationErrorDto', LessonValidationErrorDto);
+registry.register('LessonConflictErrorDto', LessonConflictErrorDto);
+registry.register('AvailabilityCheckRequest', AvailabilityCheckRequest);
+registry.register('AvailabilityCheckResponse', AvailabilityCheckResponse);
+registry.register('RefundCalculationRequest', RefundCalculationRequest);
+registry.register('RefundCalculationResponse', RefundCalculationResponse);
+registry.register('AuditTrailSearchRequest', AuditTrailSearchRequest);
+registry.register('AuditTrailSearchResponse', AuditTrailSearchResponse);
 
 // Register existing schemas
 registry.register('Booking', Booking);

@@ -57,31 +57,31 @@
 ### **Sub-Tasks:**
 
 #### **2.1: Create Lesson CRUD Schemas**
-- [ ] Define `CreateLessonSchema`, `UpdateLessonSchema`, `CancelLessonSchema` in `@driveflow/contracts`
-- [ ] Add `LessonQuerySchema` with filtering options (`actorScope`, `instructorId`, `learnerId`, `from`, `to`, `status`)
-- [ ] Create pagination schemas (`page`, `pageSize`, default 25, max 100)
-- [ ] Add location schema with lat/lng/label structure
-- [ ] **Files**: `packages/contracts/src/lessons/`
+- [x] Define `CreateLessonSchema`, `UpdateLessonSchema`, `CancelLessonSchema` in `@driveflow/contracts`
+- [x] Add `LessonQuerySchema` with filtering options (`actorScope`, `instructorId`, `learnerId`, `from`, `to`, `status`)
+- [x] Create pagination schemas (`page`, `pageSize`, default 25, max 100)
+- [x] Add location schema with lat/lng/label structure
+- [x] **Files**: `packages/contracts/src/lessons/`
 
 #### **2.2: Create Response DTOs**
-- [ ] Define `LessonDto`, `LessonListDto`, `LessonDetailsDto`
-- [ ] Add pagination response schema (`LessonPaginatedResponse`)
-- [ ] Create lesson summary schema for list views (minimal data)
-- [ ] Add status transition response schemas
-- [ ] Create error schemas for lesson-specific errors
-- [ ] **Files**: `packages/contracts/src/lessons/`
+- [x] Define `LessonDto`, `LessonListDto`, `LessonDetailsDto`
+- [x] Add pagination response schema (`LessonPaginatedResponse`)
+- [x] Create lesson summary schema for list views (minimal data)
+- [x] Add status transition response schemas
+- [x] Create error schemas for lesson-specific errors
+- [x] **Files**: `packages/contracts/src/lessons/`
 
 #### **2.3: Add API Request/Response Types**
-- [ ] Create availability check request/response schemas
-- [ ] Define refund calculation response schemas  
-- [ ] Add audit trail response schemas
-- [ ] **Files**: `packages/contracts/src/lessons/`
+- [x] Create availability check request/response schemas
+- [x] Define refund calculation response schemas  
+- [x] Add audit trail response schemas
+- [x] **Files**: `packages/contracts/src/lessons/`
 
 #### **2.4: Generate OpenAPI Specifications**
-- [ ] Run `pnpm gen` to generate types from Zod schemas
-- [ ] Verify all lesson endpoints are properly typed
-- [ ] Update API documentation
-- [ ] **Files**: Generated types, API docs
+- [x] Run `pnpm gen` to generate types from Zod schemas
+- [x] Verify all lesson endpoints are properly typed
+- [x] Update API documentation
+- [x] **Files**: Generated types, API docs
 
 ---
 
