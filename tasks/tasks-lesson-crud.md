@@ -41,13 +41,13 @@
 - [x] **Files**: `schema.prisma`, new migrations, audit utilities
 
 #### **1.4: Add Availability & Constraint Tables**
-- [ ] Create `InstructorWorkingHours` table for scheduling windows
-- [ ] Add `TravelTimeCache` table for location-based buffers
-- [ ] Create `LicenseCompatibilityMatrix` table for lesson type validation
-- [ ] Add database constraint to prevent overlapping bookings
-- [ ] Create exclusion constraint for `(instructorId, startAt, endAt)`
-- [ ] Add indexes for availability queries: `(instructorId, date, status)`, `(orgId, startAt, endAt)`
-- [ ] **Files**: `schema.prisma`, new migrations, tests
+- [x] Create `InstructorWorkingHours` table for scheduling windows
+- [x] Add `TravelTimeCache` table for location-based buffers
+- [x] Create `LicenseCompatibilityMatrix` table for lesson type validation
+- [x] Add database constraint to prevent overlapping bookings
+- [x] Create exclusion constraint for `(instructorId, startAt, endAt)`
+- [x] Add indexes for availability queries: `(instructorId, date, status)`, `(orgId, startAt, endAt)`
+- [x] **Files**: `schema.prisma`, new migrations, tests
 
 ---
 
