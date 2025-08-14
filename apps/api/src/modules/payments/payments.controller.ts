@@ -1,4 +1,4 @@
-import type { PaymentsService } from "./payments.service";
+import { PaymentsService } from "./payments.service";
 import { Controller, Get, Param } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from "@nestjs/swagger";
 // import { StripeWebhookHandler } from './webhooks/stripe.webhook';
