@@ -6,6 +6,47 @@ This document outlines the architecture and implementation of the Stripe Connect
 
 The goal of this feature is to allow driving school instructors to connect their bank accounts to the DriveFlow platform via Stripe Connect Express. This enables them to receive payouts for the lessons they conduct. The process is designed to be secure, compliant, and user-friendly.
 
+### 1.1. System Architecture
+
+```mermaid
+flowchart TB
+    subgraph Browser["Browser (localhost:3000)"]
+        UI["StripeOnboarding Component"]
+        Page["Payouts Page"]
+    end
+    
+    subgraph NestJS["NestJS API (127.0.0.1:3001)"]
+        Main["main.ts (Bootstrap)"]
+        Controller["PaymentsController"]
+        Service["PaymentsService"]
+        Module["PaymentsModule"]
+    end
+    
+    subgraph External["External Services"]
+        Stripe["Stripe Connect API"]
+        DB[("PostgreSQL (future)")]
+    end
+    
+    subgraph Packages["Shared Packages"]
+        Contracts["@driveflow/contracts"]
+        Clients["@driveflow/clients"]
+    end
+    
+    Page --> UI
+    UI -.->|"HTTP /api/payments/*"| Controller
+    Controller --> Service
+    Service -.->|"Future: Real API calls"| Stripe
+    Service -.->|"Future: DB queries"| DB
+    
+    UI --> Contracts
+    UI --> Clients
+    Controller --> Contracts
+    
+    Main -->|"Global /api prefix"| Controller
+    Module -->|"DI"| Controller
+    Module -->|"DI"| Service
+```
+
 ### Key Components:
 - **Backend API**: Working HTTP API server that implements Stripe Connect endpoints (currently implemented as Node.js HTTP server due to NestJS dependency conflicts)
 - **Frontend UI**: A React component within the Next.js web application for instructors to manage their Stripe connection
@@ -19,6 +60,45 @@ The goal of this feature is to allow driving school instructors to connect their
 ✅ **Complete Flow**: User status check → Stripe Connect → onboarding simulation
 ✅ **Test Coverage**: 26/26 core functionality tests passing
 
+### 1.2. Complete User Flow
+
+```mermaid
+sequenceDiagram
+    participant U as Instructor
+    participant FE as Frontend (React)
+    participant API as NestJS API
+    participant Stripe as Stripe Connect
+    
+    Note over U,Stripe: Initial Status Check
+    U->>FE: Visit /dashboard/instructors/{id}/payouts
+    FE->>API: GET /api/payments/instructors/{id}/payout-readiness
+    API-->>FE: { status: 'Not Started', requirements: [...] }
+    FE-->>U: Show current status + "Connect with Stripe" button
+    
+    Note over U,Stripe: Stripe Connect Flow
+    U->>FE: Click "Connect with Stripe"
+    FE->>API: GET /api/payments/instructors/{id}/stripe/connect-link
+    API-->>FE: { onboardingLink: 'https://connect.stripe.com/...' }
+    
+    Note over U,Stripe: Demo Flow (Current Implementation)
+    FE-->>U: Show confirmation dialog with flow explanation
+    alt User chooses simulation
+        U->>FE: Click OK (simulate)
+        FE->>FE: Update status to 'Complete'
+        FE-->>U: Show success message
+    else User chooses real URL
+        U->>FE: Click Cancel (show URL)
+        FE-->>U: Display real Stripe URL
+        Note over U,Stripe: In production: redirect to Stripe
+    end
+    
+    Note over U,Stripe: Future: Real Stripe Return Flow
+    U->>Stripe: Complete onboarding (future)
+    Stripe->>FE: Redirect with success params
+    FE->>FE: Update status to 'Complete'
+    FE-->>U: Show connected status
+```
+
 ## 2. Backend Implementation (`apps/api`)
 
 ### 2.1. NestJS API Server (Current Implementation)
@@ -30,6 +110,36 @@ The goal of this feature is to allow driving school instructors to connect their
 
 ### 2.2. API Endpoints
 - **Base URL**: `http://127.0.0.1:3001/api` (NestJS with global prefix)
+
+### 2.2.1. Endpoint Flow Diagram
+
+```mermaid
+flowchart LR
+    subgraph Frontend["Frontend Calls"]
+        CheckStatus["Check Status"]
+        GetLink["Get Connect Link"]
+        HealthCheck["Health Check"]
+    end
+    
+    subgraph API["API Endpoints"]
+        Health["/api/payments/health"]
+        Status["/api/payments/instructors/:id/payout-readiness"]
+        Connect["/api/payments/instructors/:id/stripe/connect-link"]
+    end
+    
+    subgraph Service["PaymentsService"]
+        HealthLogic["health()"]
+        StatusLogic["getStripeAccountStatus()"]
+        LinkLogic["ensureExpressAccountAndLink()"]
+    end
+    
+    HealthCheck --> Health --> HealthLogic
+    CheckStatus --> Status --> StatusLogic
+    GetLink --> Connect --> LinkLogic
+    
+    StatusLogic -.->|"Returns mock data"| StatusResult["{ status: 'Not Started', requirements: [...] }"]
+    LinkLogic -.->|"Returns mock data"| LinkResult["{ onboardingLink: 'https://connect.stripe.com/...' }"]
+```
 
 #### `GET /api/health`
 - **Description**: Health check endpoint to verify API is running
@@ -61,6 +171,37 @@ Fully operational NestJS enterprise system:
 
 ## 3. Frontend Implementation (`apps/web`)
 
+### 3.0. Frontend Component Flow
+
+```mermaid
+stateDiagram-v2
+    [*] --> Loading : Component mounts
+    Loading --> CheckingURL : Check URL params
+    CheckingURL --> Success : stripe_onboarding=success
+    CheckingURL --> FetchingStatus : No URL params
+    
+    FetchingStatus --> DisplayStatus : API call success
+    FetchingStatus --> Error : API call failed
+    
+    Success --> Complete : Set status to Complete
+    Complete --> CleanURL : Remove URL params
+    CleanURL --> DisplayComplete : Show success state
+    
+    DisplayStatus --> ShowConnectButton : status !== 'Complete'
+    DisplayStatus --> DisplayComplete : status === 'Complete'
+    
+    ShowConnectButton --> ConfirmDialog : User clicks Connect
+    ConfirmDialog --> SimulateSuccess : User chooses simulation
+    ConfirmDialog --> ShowRealURL : User chooses real URL
+    
+    SimulateSuccess --> DisplayComplete
+    ShowRealURL --> ShowConnectButton
+    
+    Error --> DisplayError : Show error message
+    DisplayError --> [*]
+    DisplayComplete --> [*]
+```
+
 ### 3.1. `StripeOnboarding` Component
 - **Path**: `apps/web/src/components/instructors/StripeOnboarding.tsx`
 - **Technology**: React client component with TypeScript
@@ -84,6 +225,44 @@ Fully operational NestJS enterprise system:
 3. Option 1: Simulate successful onboarding (updates status to "Complete")
 4. Option 2: View the real Stripe URL that would be used in production
 
+#### 3.1.1. Component Data Flow
+
+```mermaid
+flowchart TB
+    subgraph Component["StripeOnboarding Component"]
+        State["Component State"]
+        Effects["useEffect"]
+        Handlers["Event Handlers"]
+    end
+    
+    subgraph StateVars["State Variables"]
+        Status["status: StripeAccountStatusDto"]
+        Loading["loading: boolean"]
+        Error["error: string | null"]
+    end
+    
+    subgraph APILayer["API Layer"]
+        Client["@driveflow/clients"]
+        DirectFetch["Direct fetch calls"]
+    end
+    
+    subgraph Contracts["Type Safety"]
+        Types["@driveflow/contracts"]
+        StatusType["StripeAccountStatusDto"]
+    end
+    
+    Component --> StateVars
+    Effects --> APILayer
+    APILayer --> Contracts
+    
+    Effects -.->|"Fetch status on mount"| StatusAPI["GET /payout-readiness"]
+    Handlers -.->|"Get connect link"| ConnectAPI["GET /stripe/connect-link"]
+    
+    StatusAPI --> State
+    ConnectAPI --> DialogFlow["Confirmation Dialog"]
+    DialogFlow --> State
+```
+
 ### 3.2. Payouts Page
 - **Path**: `apps/web/src/app/dashboard/instructors/[id]/payouts/page.tsx`
 - **URL**: `http://localhost:3000/dashboard/instructors/[id]/payouts`
@@ -99,6 +278,50 @@ Fully operational NestJS enterprise system:
 - **CORS**: Configured to work with API on port 3001
 
 ## 4. Database Schema (`schema.prisma`)
+
+### 4.1. Future Database Integration
+
+```mermaid
+erDiagram
+    Instructor {
+        string id PK
+        string email
+        string firstName
+        string lastName
+        int orgId FK
+        string stripeAccountId "nullable"
+        string stripeOnboardingStatus "nullable"
+        json stripeCapabilities "nullable"
+        json stripeRequirementsDue "nullable"
+        datetime stripeConnectedAt "nullable"
+        datetime stripeDisconnectedAt "nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    Organization {
+        int id PK
+        string name
+        string stripeAccountId "nullable"
+        datetime createdAt
+        datetime updatedAt
+    }
+    
+    Lesson {
+        string id PK
+        string instructorId FK
+        string studentId FK
+        int orgId FK
+        decimal amount
+        string paymentStatus
+        datetime scheduledAt
+        datetime createdAt
+    }
+    
+    Instructor ||--o{ Lesson : teaches
+    Organization ||--o{ Instructor : employs
+    Organization ||--o{ Lesson : manages
+```
 
 The `Instructor` model was modified to include the following fields:
 
@@ -118,6 +341,44 @@ To ensure type safety, new Zod schemas were created in `packages/contracts/src/p
 - `StripeConnectLinkDto`: Defines the shape of the data returned by the `/stripe/connect-link` endpoint.
 
 ## 6. How to Run the System
+
+### 6.1. Development Setup Flow
+
+```mermaid
+flowchart TB
+    subgraph Setup["Development Setup"]
+        Install["Install Dependencies"]
+        BuildAPI["Build API"]
+        StartAPI["Start API Server"]
+        StartFE["Start Frontend"]
+    end
+    
+    subgraph Running["Running System"]
+        APIServer["NestJS API\n127.0.0.1:3001"]
+        FEServer["Next.js Frontend\nlocalhost:3000"]
+        Browser["Browser Testing"]
+    end
+    
+    subgraph Testing["Test Endpoints"]
+        HealthTest["Health Check"]
+        StatusTest["Status Check"]
+        ConnectTest["Connect Link"]
+        UITest["Full UI Flow"]
+    end
+    
+    Install --> BuildAPI --> StartAPI --> APIServer
+    Install --> StartFE --> FEServer
+    
+    APIServer --> HealthTest
+    APIServer --> StatusTest
+    APIServer --> ConnectTest
+    FEServer --> UITest
+    
+    Browser --> UITest
+    Browser -.->|"Direct API calls"| HealthTest
+    Browser -.->|"Direct API calls"| StatusTest
+    Browser -.->|"Direct API calls"| ConnectTest
+```
 
 ### Prerequisites
 - Node.js 22+ installed
@@ -184,6 +445,38 @@ pnpm run dev
 
 ## 8. Troubleshooting
 
+### 8.1. Common Issues Flow
+
+```mermaid
+flowchart TD
+    Start(["Issue Encountered"]) --> CheckPort{"Port 3001\nin use?"}
+    CheckPort -->|Yes| KillPort["lsof -ti:3001 | xargs kill -9"]
+    CheckPort -->|No| Check404{"Getting 404\nfrom frontend?"}
+    
+    KillPort --> RestartAPI["Restart API Server"]
+    RestartAPI --> TestAPI["Test API Health"]
+    
+    Check404 -->|Yes| CheckPrefix{"API prefix\nconfigured?"}
+    Check404 -->|No| CheckDI{"Dependency\ninjection error?"}
+    
+    CheckPrefix -->|No| AddPrefix["Add app.setGlobalPrefix('api')"]
+    CheckPrefix -->|Yes| CheckCORS{"CORS\nenabled?"}
+    
+    CheckDI -->|Yes| FixImport["Use import { Service }\nnot import type { Service }"]
+    CheckDI -->|No| CheckLogs["Check server logs"]
+    
+    AddPrefix --> RestartAPI
+    CheckCORS -->|No| EnableCORS["Add app.enableCors()"]
+    CheckCORS -->|Yes| CheckNetwork["Check network connectivity"]
+    
+    EnableCORS --> RestartAPI
+    FixImport --> RestartAPI
+    
+    TestAPI --> Success(["Issue Resolved"])
+    CheckLogs --> Success
+    CheckNetwork --> Success
+```
+
 ### API Server Not Starting
 - **Issue**: Port 3001 already in use
 - **Solution**: `lsof -ti:3001 | xargs kill -9`
@@ -195,3 +488,77 @@ pnpm run dev
 ### Dependency Injection Errors  
 - **Issue**: Import statement conflicts (type vs regular imports)
 - **Solution**: Use `import { Service }` not `import type { Service }` for DI
+
+## 9. Future Architecture
+
+### 9.1. Production Implementation Roadmap
+
+```mermaid
+flowchart TB
+    subgraph Current["Current State (Demo)"]
+        MockAPI["Mock API Responses"]
+        DemoFlow["Simulated Onboarding"]
+        TestData["Hardcoded Test Data"]
+    end
+    
+    subgraph Phase1["Phase 1: Real Stripe"]
+        StripeAPI["Real Stripe API Integration"]
+        WebhookHandler["Stripe Webhook Processing"]
+        AccountCreation["Express Account Creation"]
+    end
+    
+    subgraph Phase2["Phase 2: Database"]
+        PostgresIntegration["PostgreSQL Integration"]
+        InstructorData["Real Instructor Data"]
+        StatusPersistence["Status Persistence"]
+    end
+    
+    subgraph Phase3["Phase 3: Production"]
+        Authentication["Full Authentication"]
+        Authorization["RBAC Implementation"]
+        RealPayouts["Live Payout Processing"]
+    end
+    
+    Current --> Phase1
+    Phase1 --> Phase2
+    Phase2 --> Phase3
+    
+    Phase1 -.->|"Replaces"| MockAPI
+    Phase2 -.->|"Replaces"| TestData
+    Phase3 -.->|"Enhances"| DemoFlow
+```
+
+### 9.2. Real Stripe Integration Flow
+
+```mermaid
+sequenceDiagram
+    participant FE as Frontend
+    participant API as DriveFlow API
+    participant DB as PostgreSQL
+    participant Stripe as Stripe API
+    participant Webhook as Webhook Handler
+    
+    Note over FE,Webhook: Future: Real Production Flow
+    
+    FE->>API: GET /payout-readiness
+    API->>DB: Query instructor Stripe status
+    DB-->>API: Return stored status
+    API-->>FE: Real status from DB
+    
+    FE->>API: GET /stripe/connect-link
+    API->>Stripe: Create Express account (if needed)
+    Stripe-->>API: Account ID + onboarding link
+    API->>DB: Store account ID
+    API-->>FE: Real Stripe onboarding URL
+    
+    FE->>Stripe: Redirect to onboarding
+    Note over Stripe: User completes onboarding
+    Stripe->>Webhook: Account updated webhook
+    Webhook->>DB: Update instructor status
+    Stripe-->>FE: Redirect back with success
+    
+    FE->>API: GET /payout-readiness (refresh)
+    API->>DB: Query updated status
+    DB-->>API: status: 'Complete'
+    API-->>FE: Show connected status
+```

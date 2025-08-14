@@ -79,9 +79,92 @@ flowchart TB
 
 ---
 
-## 3. Update (Reschedule)
+## 3. Read (Retrieve)
 
 ### 3.1 Swimlane (Mermaid — Flowchart with subgraphs)
+
+```mermaid
+flowchart TB
+    subgraph FE["Frontend"]
+        FE_A["Load lessons page/dashboard"]
+        FE_B["Apply filters & pagination"]
+        FE_C["GET /lessons?params"]
+        FE_D["Render lesson list"]
+        FE_E["Select specific lesson"]
+        FE_F["GET /lessons/{id}"]
+        FE_G["Show lesson details"]
+    end
+
+    subgraph BFF["BFF"]
+        BFF_A["AuthZ: can view?"]
+        BFF_B["Enrich with user context"]
+        BFF_C["Forward to Lesson Service"]
+    end
+
+    subgraph LES["Lesson Service"]
+        LES_A["Parse query filters"]
+        LES_B["Apply role-based scoping"]
+        LES_C["Query lessons with pagination"]
+        LES_D["Fetch lesson by ID"]
+        LES_E["Check view permissions"]
+        LES_F["Return lesson data"]
+    end
+
+    subgraph DB["Database"]
+        DB_A["Filter by orgId, role scope"]
+        DB_B["Apply date/status filters"]
+        DB_C["Return paginated results"]
+        DB_D["Fetch lesson with relations"]
+    end
+
+    FE_A --> FE_B --> FE_C --> BFF_A --> BFF_B --> BFF_C --> LES_A
+    LES_A --> LES_B --> LES_C --> DB_A --> DB_B --> DB_C --> LES_C
+    LES_C --> FE_D
+    
+    FE_E --> FE_F --> BFF_A --> BFF_C --> LES_D --> LES_E --> DB_D --> LES_F --> FE_G
+```
+
+### 3.2 Step‑by‑step (happy path)
+
+#### List Lessons Flow:
+1. User navigates to lessons page (dashboard/calendar view)
+2. FE applies default filters (current week, user's scope)
+3. `GET /lessons?actorScope=self&from=2025-08-12&to=2025-08-18&page=1`
+4. LessonSvc applies role-based filtering:
+   - **Learner/Parent**: only their lessons
+   - **Instructor**: lessons they're teaching
+   - **Admin**: all org lessons (with optional filters)
+5. DB query with pagination, returns lesson summaries
+6. FE renders list with key info: time, status, participants
+
+#### Lesson Details Flow:
+1. User clicks on specific lesson from list
+2. `GET /lessons/{lessonId}` 
+3. Permission check: can user view this lesson?
+4. Fetch full lesson details with relations (instructor, learner, payment)
+5. Return complete lesson object
+6. FE shows detailed view with actions (reschedule/cancel if allowed)
+
+### 3.3 Role-Based Data Scoping
+
+- **Learner**: Can view own lessons only (`learnerId = userId`)
+- **Parent**: Can view lessons for their children (`learnerId IN childrenIds`)
+- **Instructor**: Can view lessons they're teaching (`instructorId = userId`)  
+- **Admin**: Can view all lessons in their org (`orgId = userOrgId`)
+
+### 3.4 Performance & Caching Notes
+
+- **Pagination**: Default 25 items, max 100 per page
+- **Indexes**: `(orgId, instructorId, start)`, `(orgId, learnerId, start)`
+- **Caching**: Cache lesson lists for 30s, individual lessons for 5min
+- **Eager Loading**: Include instructor/learner names in list view
+- **Lazy Loading**: Full payment/audit details only on detail view
+
+---
+
+## 4. Update (Reschedule)
+
+### 4.1 Swimlane (Mermaid — Flowchart with subgraphs)
 
 ```mermaid
 flowchart TB
@@ -120,7 +203,7 @@ flowchart TB
     LES_C -->|"available"| LES_D --> LES_E --> NOTI_A --> FE_D
 ```
 
-### 3.2 Step‑by‑step (happy path)
+### 4.2 Step‑by‑step (happy path)
 
 1. User opens lesson
 2. Picks new slot (availability rechecked)
@@ -129,7 +212,7 @@ flowchart TB
 5. If fee → Payment intent; on success, update lesson; if waived, continue
 6. Persist changes; emit `LessonRescheduled`; send notifications.
 
-### 3.3 Guardrails
+### 4.3 Guardrails
 
 - Not allowed if `status ∈ {Completed, Cancelled, NoShow}` or within hard cutoff (e.g., <2h).
 - Audit: who changed, when, old/new time diff.
@@ -137,9 +220,9 @@ flowchart TB
 
 ---
 
-## 4. Cancel (Learner / Instructor / Admin)
+## 5. Cancel (Learner / Instructor / Admin)
 
-### 4.1 Swimlane (Mermaid — Flowchart with subgraphs)
+### 5.1 Swimlane (Mermaid — Flowchart with subgraphs)
 
 ```mermaid
 flowchart TB
@@ -176,7 +259,7 @@ flowchart TB
     LES_E --> PAY_A --> PAY_B --> NOTI_A --> FE_D
 ```
 
-### 4.2 Policy Matrix (examples)
+### 5.2 Policy Matrix (examples)
 
 - **Learner‑initiated**
     - ≥24h before: 100% refund to original method or wallet credit
@@ -185,7 +268,7 @@ flowchart TB
 - **Instructor‑initiated**: full refund + auto‑priority for rebooking
 - **Admin override**: any outcome permitted; reason mandatory
 
-### 4.3 Edge Cases
+### 5.3 Edge Cases
 
 - If payment never captured (`PendingPayment`): cancel without refund; release hold.
 - If coupon/credit used: restore pro‑rata to wallet; keep audit trail.
@@ -193,9 +276,9 @@ flowchart TB
 
 ---
 
-## 5. API Contracts
+## 6. API Contracts
 
-### 5.1 POST /lessons
+### 6.1 POST /lessons
 
 **Headers**: `Authorization: Bearer <token>`, `Idempotency-Key: <uuid>`
 
@@ -213,7 +296,7 @@ flowchart TB
 
 **Errors**: `409 SLOT_TAKEN`, `422 POLICY_VIOLATION`, `402 PAYMENT_REQUIRED`, `403 FORBIDDEN`
 
-### 5.2 GET /lessons
+### 6.2 GET /lessons
 
 `/lessons?actorScope=self|instructor|admin&instructorId&learnerId&from&to&status&page&pageSize`
 
@@ -223,7 +306,7 @@ flowchart TB
 { "items": [{ "id":"...", "start":"...", "status":"Scheduled" }], "page":1, "pageSize":25, "total":120 }
 ```
 
-### 5.3 GET /lessons/{lessonId}
+### 6.3 GET /lessons/{lessonId}
 
 **200 OK**
 
@@ -231,7 +314,7 @@ flowchart TB
 {  "id": "33333333-3333-3333-3333-333333333333",  "learnerId": "11111111-1111-1111-1111-111111111111",  "instructorId": "22222222-2222-2222-2222-222222222222",  "type": "Standard",  "start": "2025-08-12T10:00:00+05:30",  "end": "2025-08-12T11:00:00+05:30",  "location": {"lat": -33.86, "lng": 151.21, "label": "Sydney CBD"},  "status": "Scheduled",  "paymentStatus": "Paid",  "createdAt": "2025-08-10T12:00:00Z",  "updatedAt": "2025-08-10T12:05:00Z"}
 ```
 
-### 5.4 PUT /lessons/{lessonId}
+### 6.4 PUT /lessons/{lessonId}
 
 **Body**
 
@@ -247,7 +330,7 @@ flowchart TB
 
 **Errors**: `409 SLOT_TAKEN`, `422 CUTOFF_EXCEEDED`, `409 NOT_RESCHEDULABLE`
 
-### 5.5 DELETE /lessons/{lessonId}
+### 6.5 DELETE /lessons/{lessonId}
 
 **Body or Query**
 
@@ -263,7 +346,7 @@ flowchart TB
 
 ---
 
-## 6. State Model
+## 7. State Model
 
 ```
 Draft -> PendingPayment -> Scheduled -> InProgress -> Completed
@@ -275,7 +358,7 @@ Scheduled -> NoShow (auto after grace)
 
 ---
 
-## 7. Data & Persistence Notes
+## 8. Data & Persistence Notes
 
 - **Unique exclusion** on `(instructorId, start, end)` to prevent overlaps.
 - **Outbox** events: `LessonCreated | LessonRescheduled | LessonCancelled`.
@@ -285,7 +368,7 @@ Scheduled -> NoShow (auto after grace)
 
 ---
 
-## 8. QA Scenarios (selected)
+## 9. QA Scenarios (selected)
 
 - Cannot book overlapping instructor slots (but different instructors can overlap).
 - Reschedule within cutoff prompts fee; blocks if unpaid.
@@ -296,7 +379,7 @@ Scheduled -> NoShow (auto after grace)
 
 ---
 
-## 9. Appendix — Sample Errors
+## 10. Appendix — Sample Errors
 
 ```json
 { "error": "SLOT_TAKEN", "message": "The selected time is no longer available." }{ "error": "CUTOFF_EXCEEDED", "message": "Rescheduling not permitted within 2 hours of start." }{ "error": "NOT_RESCHEDULABLE", "message": "Completed lessons cannot be rescheduled." }
@@ -308,11 +391,11 @@ Scheduled -> NoShow (auto after grace)
 
 ---
 
-## 10. Requirements ↔︎ Persona Traceability
+## 11. Requirements ↔︎ Persona Traceability
 
 This section links functional requirements to the personas they serve. Use it during backlog refinement, sprint planning, and UAT.
 
-### 10.1 Capability ↔︎ Persona Matrix (High‑level)
+### 11.1 Capability ↔︎ Persona Matrix (High‑level)
 
 | Capability | ID | Learner | Parent | Instructor | Admin | Priority | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -324,7 +407,7 @@ This section links functional requirements to the personas they serve. Use it du
 | Payments & Refunds | C-06 | ✓ | ✓ |  | ✓ | Must | Card/wallet support; admin overrides |
 | Audit & Events | C-07 |  |  |  | ✓ | Must | Full audit, outbox events |
 
-### 10.2 Functional Requirements Mapped to Personas
+### 11.2 Functional Requirements Mapped to Personas
 
 ### Create / Book
 
@@ -366,7 +449,7 @@ This section links functional requirements to the personas they serve. Use it du
 | F-14 | Auto mark `NoShow` after grace | Instructor | Learner, Parent, Admin | Scheduled job; policy-driven |
 | F-15 | Admin override on policy/refund | Admin | Learner, Parent, Instructor | Mandatory reason; audit + approval rules |
 
-### 10.3 Non‑Functional Requirements (NFRs) tagged by Persona Risk
+### 11.3 Non‑Functional Requirements (NFRs) tagged by Persona Risk
 
 | NFR ID | Requirement | Persona Risk if unmet | Target |
 | --- | --- | --- | --- |
@@ -378,7 +461,7 @@ This section links functional requirements to the personas they serve. Use it du
 | NF-06 | Reliable event outbox | Missed notifications (all) | Exactly-once delivery semantics |
 | NF-07 | PII minimisation | Compliance overhead (all) | Only necessary fields; masked logs |
 
-### 10.4 UAT Scenarios by Persona (Shortlist)
+### 11.4 UAT Scenarios by Persona (Shortlist)
 
 - **Learner/Parent**
     - Book with wallet-only payment → success notification includes calendar invite.
