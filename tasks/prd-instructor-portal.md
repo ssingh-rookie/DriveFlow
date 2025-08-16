@@ -132,9 +132,23 @@ No new tables required. Utilize existing Prisma models:
 
 ### API Endpoints Needed
 
+**All endpoints leverage existing RBAC system with proper guards and decorators.**
+
 #### 1. GET /api/v1/instructor/schedule?date=YYYY-MM-DD
 
 Get instructor's daily lesson schedule with organization scoping.
+
+**Implementation:**
+
+```typescript
+@Get('schedule')
+@ScopedLessonAccess()
+@UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+async getInstructorSchedule(@Query('date') date: string, @CurrentUser() user: AuthenticatedUser) {
+  // RoleGuard automatically scopes to instructor's assigned students
+  // OrgScopeGuard enforces organization boundaries
+}
+```
 
 ```mermaid
 sequenceDiagram
@@ -155,6 +169,18 @@ sequenceDiagram
 #### 2. GET /api/v1/instructor/students
 
 Get list of students assigned to instructor within their organization.
+
+**Implementation:**
+
+```typescript
+@Get('students')
+@ScopedStudentAccess()
+@UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+async getInstructorStudents(@CurrentUser() user: AuthenticatedUser) {
+  // RoleGuard provides scopedResourceIds (assigned student IDs)
+  // Automatically filtered to instructor's organization
+}
+```
 
 ```mermaid
 sequenceDiagram
@@ -194,6 +220,23 @@ sequenceDiagram
 #### 4. PUT /api/v1/instructor/lessons/:id/status
 
 Update lesson status with audit trail and organization validation.
+
+**Implementation:**
+
+```typescript
+@Put('lessons/:id/status')
+@LessonManagement()
+@OrgScoped()
+@UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+async updateLessonStatus(
+  @Param('id') id: string,
+  @Body() request: UpdateLessonStatusDto,
+  @CurrentUser() user: AuthenticatedUser
+) {
+  // RoleGuard validates instructor can access this lesson
+  // Automatic audit trail through existing LessonStateHistory
+}
+```
 
 ```mermaid
 sequenceDiagram
@@ -237,38 +280,114 @@ sequenceDiagram
 
 ### Integration Points
 
-- **Authentication**: Extend existing JWT-based auth system
-- **Role Management**: Use existing UserOrg role checking
+- **Authentication**: Leverage existing JWT strategy and JwtAuthGuard
+- **RBAC Integration**: Use existing RoleGuard with instructor-scoped permissions
+- **Organization Scoping**: Integrate with existing OrgScopeGuard and @OrgScoped decorators
+- **Role Management**: Use existing UserOrg role checking and @InstructorOnly decorator
 - **Lesson State Management**: Integrate with existing LessonStateHistory tracking
 - **Mock Stripe Integration**: Connect with existing payment flow for completed lessons
 
-### Real-time Features
+### Real-time Features & State Management
 
-- **Client-side state management** for immediate UI updates after lesson status changes
-- **Optimistic updates** with rollback capability for failed operations
-- **Auto-refresh** capability for schedule updates (manual trigger only)
+**Leverage Existing TanStack Query Implementation:**
+
+- **Server State**: Use existing TanStack Query setup with sophisticated caching and optimistic updates
+- **Query Keys**: Extend existing pattern (`lessonKeys`, `instructorKeys`) with instructor-specific keys
+- **Optimistic Updates**: Follow existing pattern for immediate UI feedback on lesson status changes
+- **Cache Invalidation**: Use existing query invalidation patterns for cross-component data consistency
+- **Background Refetching**: Leverage existing auto-refresh configuration (30s for lessons, 5min for static data)
+
+**New Instructor Query Patterns:**
+
+```typescript
+export const instructorPortalKeys = {
+  all: ["instructor-portal"] as const,
+  schedule: (date: string) =>
+    [...instructorPortalKeys.all, "schedule", date] as const,
+  students: () => [...instructorPortalKeys.all, "students"] as const,
+  studentLessons: (studentId: string) =>
+    [...instructorPortalKeys.all, "student-lessons", studentId] as const,
+  lessonHistory: (lessonId: string) =>
+    [...instructorPortalKeys.all, "lesson-history", lessonId] as const,
+};
+```
+
+**Client State Management:**
+
+- **React Context**: For UI-only state (current selected date, active lesson filters, user preferences)
+- **Session Storage**: For development role switching and test user context
 
 ## Multi-Tenancy & Security
 
+### Existing RBAC System Integration
+
+**Leverage Comprehensive Auth Infrastructure:**
+DriveFlow has a sophisticated RBAC system with instructor-scoped permissions already implemented.
+
+**Key Components to Use:**
+
+- **JwtAuthGuard**: JWT authentication with AuthenticatedUser context
+- **RoleGuard**: Advanced role and permission checking with instructor scoping
+- **OrgScopeGuard**: Multi-tenant organization boundary enforcement
+- **Decorator Ecosystem**: Rich set of pre-built authorization decorators
+
+**Ready-to-Use Decorators for Instructor Endpoints:**
+
+```typescript
+// Instructor-only access
+@InstructorOnly()
+@UseGuards(JwtAuthGuard, RoleGuard)
+
+// Scoped lesson access (instructor sees only assigned students)
+@ScopedLessonAccess()
+@UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+
+// Scoped student access (instructor sees only their students)
+@ScopedStudentAccess()
+@UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+
+// Custom lesson management permissions
+@LessonManagement()
+@OrgScoped()
+@UseGuards(JwtAuthGuard, RoleGuard, OrgScopeGuard)
+```
+
+**Instructor Scoped Permissions (Already Implemented):**
+
+- Instructors can only access students they're assigned to
+- Lesson/booking queries automatically scoped to assigned students
+- Organization-level data isolation enforced at guard level
+- Comprehensive audit logging for all authorization events
+
 ### Organization Scoping (orgId)
 
-- **Critical**: All database queries MUST include orgId filtering
-- **Instructor Verification**: Verify instructor belongs to organization before any data access
-- **Student Access**: Instructors can only view students from their assigned driving school
-- **Cross-tenant Protection**: Explicit checks to prevent data leakage between organizations
+- **Automatic Enforcement**: OrgScopeGuard ensures orgId scoping without manual checks
+- **Token Validation**: User's token organization matches request organization
+- **Database Queries**: All queries automatically scoped through existing guard system
+- **Cross-tenant Protection**: Guards prevent data leakage between organizations
 
 ### Role-Based Access Control
 
-- **Instructor Role**: Users with UserOrg.role = 'INSTRUCTOR' can access instructor portal
-- **Organization Membership**: Must have active UserOrg record for the organization
-- **Lesson Assignment**: Can only modify lessons where Booking.instructorId matches logged-in instructor
-- **Read-Only Student Data**: Instructors can view but not modify student information
+**Instructor Role Implementation (Existing):**
+
+- **@InstructorOnly()**: Restricts endpoints to instructor role only
+- **Scoped Permissions**: RoleGuard checks instructor assignment to students/lessons
+- **Resource-Level Security**: Guards validate instructor access to specific resources
+- **Permission Matrix**: DEFAULT_PERMISSIONS defines instructor capabilities
+
+**Authentication Flow (Existing):**
+
+```typescript
+// User Authentication → Role Validation → Organization Scoping → Resource Access
+JWT Token → AuthenticatedUser → Role Check → Org Membership → Scoped Permissions
+```
 
 ### Data Privacy Considerations
 
-- **Audit Logging**: Track all lesson status changes with actor identification
-- **Minimal Data Exposure**: Only expose necessary student information to instructors
-- **Session Management**: Proper session timeout and role-based redirects
+- **Automatic Audit Logging**: All authorization events logged by RoleGuard
+- **Minimal Data Exposure**: Guards enforce least-privilege access
+- **Security Event Logging**: Failed access attempts tracked for monitoring
+- **IP and User Agent Tracking**: Complete request context logged for security
 
 ## Success Metrics
 
@@ -326,9 +445,11 @@ sequenceDiagram
 
 ### Technical Decisions
 
-1. **State Management**: Should we use React Context or implement a lightweight state management solution for instructor portal state?
-2. **Caching Strategy**: How should we handle caching of instructor schedules and student data for performance?
-3. **Offline Capability**: Should the portal work offline for viewing schedules, or is online-only acceptable for MVP?
+1. **State Management**: ✅ **RESOLVED** - Use existing TanStack Query implementation for server state management with React Context for client-only state (current user role, UI preferences)
+2. **Caching Strategy**: ✅ **RESOLVED** - Leverage existing TanStack Query cache configuration (5min staleTime, optimistic updates, background refetching)
+3. **RBAC Integration**: ✅ **RESOLVED** - Use existing comprehensive RBAC system with @InstructorOnly, @ScopedLessonAccess, and @OrgScoped decorators
+4. **Organization Scoping**: ✅ **RESOLVED** - Leverage existing OrgScopeGuard for automatic multi-tenant data isolation
+5. **Offline Capability**: Should the portal work offline for viewing schedules, or is online-only acceptable for MVP?
 
 ### Business Logic Clarifications
 
