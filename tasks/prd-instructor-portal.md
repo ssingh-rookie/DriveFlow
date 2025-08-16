@@ -25,49 +25,61 @@ Create a lesson management portal for instructors employed by driving schools, e
 
 ### Secondary User Flows
 
-- **As an instructor**, I want to easily switch between my instructor view and any student accounts I may have for testing
 - **As an instructor**, I want to update my availability schedule so that I can manage my working hours (future scope)
 - **As an instructor**, I want to see lesson details (pickup/dropoff locations, student notes) so that I can prepare effectively
+
+### Developer User Flows
+
+- **As a developer**, I want to easily switch between student and instructor roles during testing so that I can verify both user experiences without multiple accounts
+- **As a developer**, I want quick login options for different user types so that I can rapidly test various scenarios
 
 ## Functional Requirements
 
 ### 1. Authentication & Role-Based Access
 
-- **REQ-001**: Extend existing login page with role selection (Student/Instructor)
-- **REQ-002**: Implement instructor role checking using existing User and UserOrg models
-- **REQ-003**: Ensure all instructor queries are scoped to instructor's orgId for multi-tenant security
-- **REQ-004**: Redirect instructors to instructor portal (`/instructor`) after successful login
+- **REQ-001**: Extend existing login page with developer-friendly role selection (Student/Instructor) for easy testing
+- **REQ-002**: Implement quick login buttons or dropdown for different test users (e.g., "Login as Instructor John", "Login as Student Sarah")
+- **REQ-003**: Implement instructor role checking using existing User and UserOrg models
+- **REQ-004**: Ensure all instructor queries are scoped to instructor's orgId for multi-tenant security
+- **REQ-005**: Redirect users to appropriate portal based on selected role (`/instructor` for instructors, `/lessons` for students)
+- **REQ-006**: Provide role switching capability in development environment without full logout/login cycle
 
 ### 2. Instructor Dashboard
 
-- **REQ-005**: Display today's lesson schedule as the primary view
-- **REQ-006**: Show lesson cards with: time, student name, service type, pickup/dropoff locations, current status
-- **REQ-007**: Filter lessons to only show those assigned to the logged-in instructor
-- **REQ-008**: Display lessons chronologically (earliest first)
-- **REQ-009**: Highlight current/upcoming lessons with visual indicators
+- **REQ-007**: Display today's lesson schedule as the primary view
+- **REQ-008**: Show lesson cards with: time, student name, service type, pickup/dropoff locations, current status
+- **REQ-009**: Filter lessons to only show those assigned to the logged-in instructor
+- **REQ-010**: Display lessons chronologically (earliest first)
+- **REQ-011**: Highlight current/upcoming lessons with visual indicators
 
 ### 3. Lesson Management
 
-- **REQ-010**: Provide "Start Lesson" action for confirmed lessons at/near start time
-- **REQ-011**: Provide "Complete Lesson" action for in-progress lessons
-- **REQ-012**: Provide "Mark No-Show" action for lessons where students don't appear
-- **REQ-013**: Update lesson status in real-time when actions are taken
-- **REQ-014**: Prevent instructors from modifying lessons belonging to other instructors
-- **REQ-015**: Show status history for transparency (when lesson was started, by whom, etc.)
+- **REQ-012**: Provide "Start Lesson" action for confirmed lessons at/near start time
+- **REQ-013**: Provide "Complete Lesson" action for in-progress lessons
+- **REQ-014**: Provide "Mark No-Show" action for lessons where students don't appear
+- **REQ-015**: Update lesson status in real-time when actions are taken
+- **REQ-016**: Prevent instructors from modifying lessons belonging to other instructors
+- **REQ-017**: Show status history for transparency (when lesson was started, by whom, etc.)
 
 ### 4. Student Lesson History
 
-- **REQ-016**: Display list of students assigned to the instructor within their organization
-- **REQ-017**: Show complete lesson history for each student (past and upcoming)
-- **REQ-018**: Include lesson status, dates, notes, and basic progress tracking
-- **REQ-019**: Scope student access to instructor's organization only
+- **REQ-018**: Display list of students assigned to the instructor within their organization
+- **REQ-019**: Show complete lesson history for each student (past and upcoming)
+- **REQ-020**: Include lesson status, dates, notes, and basic progress tracking
+- **REQ-021**: Scope student access to instructor's organization only
 
-### 5. Error Handling & Validation
+### 5. Developer Testing Features
 
-- **REQ-020**: Validate that instructor belongs to the same organization as the lesson before allowing modifications
-- **REQ-021**: Handle edge cases like lessons that are already started by another user
-- **REQ-022**: Display friendly error messages for permission denied scenarios
-- **REQ-023**: Gracefully handle network connectivity issues with appropriate feedback
+- **REQ-022**: Implement development-only quick user switching without authentication
+- **REQ-023**: Provide test user seeds with different roles (instructors, students) across multiple organizations
+- **REQ-024**: Include role indicator in UI header during development to show current test user context
+
+### 6. Error Handling & Validation
+
+- **REQ-025**: Validate that instructor belongs to the same organization as the lesson before allowing modifications
+- **REQ-026**: Handle edge cases like lessons that are already started by another user
+- **REQ-027**: Display friendly error messages for permission denied scenarios
+- **REQ-028**: Gracefully handle network connectivity issues with appropriate feedback
 
 ## Non-Goals (Out of Scope)
 
@@ -120,12 +132,107 @@ No new tables required. Utilize existing Prisma models:
 
 ### API Endpoints Needed
 
+#### 1. GET /api/v1/instructor/schedule?date=YYYY-MM-DD
+
+Get instructor's daily lesson schedule with organization scoping.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant DB as Database
+
+    C->>A: GET /api/v1/instructor/schedule?date=2024-01-15
+    A->>A: Extract JWT & validate instructor role
+    A->>A: Get instructor.orgId from UserOrg
+    A->>DB: SELECT * FROM Booking WHERE<br/>instructorId = ? AND<br/>orgId = ? AND<br/>DATE(startAt) = ?
+    DB->>A: Return filtered bookings
+    A->>DB: JOIN with Student, Service tables<br/>(same orgId scope)
+    DB->>A: Return enriched lesson data
+    A->>C: JSON: { lessons: [...] }
 ```
-GET /api/v1/instructor/schedule?date=YYYY-MM-DD
-GET /api/v1/instructor/students
-GET /api/v1/instructor/students/:id/lessons
-PUT /api/v1/instructor/lessons/:id/status
-GET /api/v1/instructor/lessons/:id/history
+
+#### 2. GET /api/v1/instructor/students
+
+Get list of students assigned to instructor within their organization.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant DB as Database
+
+    C->>A: GET /api/v1/instructor/students
+    A->>A: Extract JWT & validate instructor role
+    A->>A: Get instructor.orgId from UserOrg
+    A->>DB: SELECT DISTINCT Student.* FROM Student<br/>JOIN Booking ON Student.id = Booking.studentId<br/>WHERE Booking.instructorId = ? AND<br/>Student.orgId = ?
+    DB->>A: Return org-scoped students
+    A->>C: JSON: { students: [...] }
+```
+
+#### 3. GET /api/v1/instructor/students/:id/lessons
+
+Get complete lesson history for a specific student (org-scoped).
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant DB as Database
+
+    C->>A: GET /api/v1/instructor/students/123/lessons
+    A->>A: Extract JWT & validate instructor role
+    A->>A: Get instructor.orgId from UserOrg
+    A->>DB: Verify Student belongs to instructor's org:<br/>SELECT orgId FROM Student WHERE id = ?
+    DB->>A: Return student.orgId
+    A->>A: Validate orgId matches instructor's org
+    A->>DB: SELECT * FROM Booking WHERE<br/>studentId = ? AND instructorId = ? AND<br/>orgId = ? ORDER BY startAt DESC
+    DB->>A: Return student's lesson history
+    A->>C: JSON: { lessons: [...] }
+```
+
+#### 4. PUT /api/v1/instructor/lessons/:id/status
+
+Update lesson status with audit trail and organization validation.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant DB as Database
+
+    C->>A: PUT /api/v1/instructor/lessons/456/status<br/>{ status: "in_progress" }
+    A->>A: Extract JWT & validate instructor role
+    A->>A: Get instructor.orgId & instructorId
+    A->>DB: SELECT orgId, instructorId, status FROM Booking<br/>WHERE id = ?
+    DB->>A: Return booking details
+    A->>A: Validate: booking.orgId == instructor.orgId<br/>AND booking.instructorId == instructor.id
+    A->>DB: BEGIN TRANSACTION
+    A->>DB: UPDATE Booking SET status = ?, statusChangedAt = NOW()<br/>WHERE id = ?
+    A->>DB: INSERT INTO LessonStateHistory<br/>(orgId, bookingId, fromStatus, toStatus, actorUserId)
+    A->>DB: COMMIT TRANSACTION
+    A->>C: JSON: { success: true, lesson: {...} }
+```
+
+#### 5. GET /api/v1/instructor/lessons/:id/history
+
+Get audit trail for lesson status changes.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant A as API
+    participant DB as Database
+
+    C->>A: GET /api/v1/instructor/lessons/456/history
+    A->>A: Extract JWT & validate instructor role
+    A->>A: Get instructor.orgId from UserOrg
+    A->>DB: Verify lesson belongs to instructor's org:<br/>SELECT orgId, instructorId FROM Booking WHERE id = ?
+    DB->>A: Return booking ownership details
+    A->>A: Validate orgId matches instructor's org<br/>AND instructorId matches instructor
+    A->>DB: SELECT * FROM LessonStateHistory<br/>WHERE bookingId = ? AND orgId = ?<br/>ORDER BY createdAt ASC
+    DB->>A: Return status change history
+    A->>C: JSON: { history: [...] }
 ```
 
 ### Integration Points
@@ -185,9 +292,11 @@ GET /api/v1/instructor/lessons/:id/history
 
 - **Dependencies**: Existing authentication system, UserOrg model
 - **Deliverables**:
-  - Enhanced login page with role selection
+  - Enhanced login page with developer-friendly role selection
+  - Quick login options for test users (development environment)
   - Instructor portal routing and layout
   - Organization-scoped authentication middleware
+  - Role switching capability for development testing
 
 ### Phase 2: Schedule Dashboard (Week 2)
 
