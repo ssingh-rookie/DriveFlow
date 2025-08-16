@@ -1,12 +1,13 @@
 # DriveFlow — Lesson CRUD Flows (Create / Read / Update / Cancel)
 
-*Authored as Senior Technical Business Analyst — developer‑ready documentation.*
+_Authored as Senior Technical Business Analyst — developer‑ready documentation._
 
 ---
 
 ## 1. Scope & Context
 
 Lesson management for driving schools covering:
+
 - **Create / Book**
 - **Read / Retrieve**
 - **Update / Reschedule**
@@ -80,9 +81,11 @@ flowchart TB
 ### 2.4 Availability Service Integration Requirements
 
 #### **Critical Gap: Sophisticated Availability Checking**
+
 The lesson booking system requires comprehensive availability validation beyond simple time slot checking:
 
 **Travel Buffer Calculations:**
+
 - **Distance-Based Buffers**: Calculate travel time between lesson locations using Maps API
 - **Dynamic Buffers**: Adjust buffer time based on traffic conditions, time of day, and route complexity
 - **Multi-Location Support**: Handle instructors teaching at multiple pickup/drop-off points
@@ -90,6 +93,7 @@ The lesson booking system requires comprehensive availability validation beyond 
 - **Route Optimization**: Suggest optimal lesson sequencing to minimize travel time
 
 **Working Hours & Scheduling Constraints:**
+
 - **Instructor Availability Windows**: Personal working hours (e.g., 8:00-18:00 weekdays)
 - **Organization Hours**: Business operation hours that override instructor preferences
 - **Break Time Management**: Mandatory breaks (lunch, rest periods) with buffer enforcement
@@ -97,12 +101,14 @@ The lesson booking system requires comprehensive availability validation beyond 
 - **Holiday & Leave Management**: Integration with instructor leave/holiday calendar
 
 **License Type Compatibility Validation:**
+
 - **Student License Requirements**: Match lesson type with student's current license level
 - **Instructor Certifications**: Verify instructor qualifications for specific lesson types (e.g., manual vs automatic, heavy vehicle)
 - **Progression Rules**: Enforce prerequisite lessons before advanced training
 - **Restriction Validation**: Check student restrictions (medical, age-based, legal)
 
 **Time-of-Day & Environmental Rules:**
+
 - **Daylight Restrictions**: Learner drivers restricted to daylight hours (sunrise to sunset)
 - **Night Driving Certification**: Advanced lessons requiring special instructor certification
 - **Weather Conditions**: Integration with weather API for lesson safety assessment
@@ -110,13 +116,27 @@ The lesson booking system requires comprehensive availability validation beyond 
 - **School Zone Restrictions**: Time-based restrictions around educational facilities
 
 **Implementation Requirements:**
+
 ```typescript
 // Availability Service Interface
 interface AvailabilityService {
-  checkSlotAvailability(request: AvailabilityRequest): Promise<AvailabilityResult>;
-  calculateTravelBuffer(from: Location, to: Location, timeOfDay: Date): Promise<number>;
-  validateLicenseCompatibility(studentId: string, lessonType: string): Promise<ValidationResult>;
-  checkTimeRestrictions(dateTime: Date, studentId: string, instructorId: string): Promise<RestrictionResult>;
+  checkSlotAvailability(
+    request: AvailabilityRequest,
+  ): Promise<AvailabilityResult>;
+  calculateTravelBuffer(
+    from: Location,
+    to: Location,
+    timeOfDay: Date,
+  ): Promise<number>;
+  validateLicenseCompatibility(
+    studentId: string,
+    lessonType: string,
+  ): Promise<ValidationResult>;
+  checkTimeRestrictions(
+    dateTime: Date,
+    studentId: string,
+    instructorId: string,
+  ): Promise<RestrictionResult>;
   getAvailableSlots(filters: AvailabilityFilters): Promise<AvailableSlot[]>;
 }
 
@@ -143,6 +163,7 @@ interface AvailabilityFilters {
 ```
 
 **Database Requirements:**
+
 - **Instructor Working Hours**: Flexible schedule patterns with recurring rules and exceptions
 - **Travel Time Cache**: Pre-calculated travel times between common locations with TTL
 - **License Compatibility Matrix**: Student license types vs available lesson types
@@ -150,6 +171,7 @@ interface AvailabilityFilters {
 - **Location Geocoding**: Cached latitude/longitude for all pickup/dropoff locations
 
 **External Integrations:**
+
 - **Maps API**: Real-time travel time calculations with traffic data
 - **Weather API**: Current and forecasted weather conditions for safety assessment
 - **Geocoding Service**: Address to coordinate conversion for location-based calculations
@@ -197,13 +219,14 @@ flowchart TB
     FE_A --> FE_B --> FE_C --> BFF_A --> BFF_B --> BFF_C --> LES_A
     LES_A --> LES_B --> LES_C --> DB_A --> DB_B --> DB_C --> LES_C
     LES_C --> FE_D
-    
+
     FE_E --> FE_F --> BFF_A --> BFF_C --> LES_D --> LES_E --> DB_D --> LES_F --> FE_G
 ```
 
 ### 3.2 Step‑by‑step (happy path)
 
 #### List Lessons Flow:
+
 1. User navigates to lessons page (dashboard/calendar view)
 2. FE applies default filters (current week, user's scope)
 3. `GET /lessons?actorScope=self&from=2025-08-12&to=2025-08-18&page=1`
@@ -215,8 +238,9 @@ flowchart TB
 6. FE renders list with key info: time, status, participants
 
 #### Lesson Details Flow:
+
 1. User clicks on specific lesson from list
-2. `GET /lessons/{lessonId}` 
+2. `GET /lessons/{lessonId}`
 3. Permission check: can user view this lesson?
 4. Fetch full lesson details with relations (instructor, learner, payment)
 5. Return complete lesson object
@@ -226,7 +250,7 @@ flowchart TB
 
 - **Learner**: Can view own lessons only (`learnerId = userId`)
 - **Parent**: Can view lessons for their children (`learnerId IN childrenIds`)
-- **Instructor**: Can view lessons they're teaching (`instructorId = userId`)  
+- **Instructor**: Can view lessons they're teaching (`instructorId = userId`)
 - **Admin**: Can view all lessons in their org (`orgId = userOrgId`)
 
 ### 3.4 Performance & Caching Notes
@@ -339,9 +363,9 @@ flowchart TB
 ### 5.2 Policy Matrix (examples)
 
 - **Learner‑initiated**
-    - ≥24h before: 100% refund to original method or wallet credit
-    - 2–24h: 50% fee (configurable)
-    - <2h: no refund (except admin override)
+  - ≥24h before: 100% refund to original method or wallet credit
+  - 2–24h: 50% fee (configurable)
+  - <2h: no refund (except admin override)
 - **Instructor‑initiated**: full refund + auto‑priority for rebooking
 - **Admin override**: any outcome permitted; reason mandatory
 
@@ -362,13 +386,26 @@ flowchart TB
 **Body**
 
 ```json
-{  "learnerId": "11111111-1111-1111-1111-111111111111",  "instructorId": "22222222-2222-2222-2222-222222222222",  "type": "Standard",  "start": "2025-08-12T10:00:00+05:30",  "end": "2025-08-12T11:00:00+05:30",  "location": {"lat": -33.86, "lng": 151.21, "label": "Sydney CBD"},  "paymentMethod": "wallet",  "notes": "Focus: reverse parking"}
+{
+  "learnerId": "11111111-1111-1111-1111-111111111111",
+  "instructorId": "22222222-2222-2222-2222-222222222222",
+  "type": "Standard",
+  "start": "2025-08-12T10:00:00+05:30",
+  "end": "2025-08-12T11:00:00+05:30",
+  "location": { "lat": -33.86, "lng": 151.21, "label": "Sydney CBD" },
+  "paymentMethod": "wallet",
+  "notes": "Focus: reverse parking"
+}
 ```
 
 **201 Created**
 
 ```json
-{ "lessonId": "33333333-3333-3333-3333-333333333333", "status": "Scheduled", "paymentStatus": "Paid" }
+{
+  "lessonId": "33333333-3333-3333-3333-333333333333",
+  "status": "Scheduled",
+  "paymentStatus": "Paid"
+}
 ```
 
 **Errors**: `409 SLOT_TAKEN`, `422 POLICY_VIOLATION`, `402 PAYMENT_REQUIRED`, `403 FORBIDDEN`
@@ -380,7 +417,12 @@ flowchart TB
 **200 OK**
 
 ```json
-{ "items": [{ "id":"...", "start":"...", "status":"Scheduled" }], "page":1, "pageSize":25, "total":120 }
+{
+  "items": [{ "id": "...", "start": "...", "status": "Scheduled" }],
+  "page": 1,
+  "pageSize": 25,
+  "total": 120
+}
 ```
 
 ### 6.3 GET /lessons/{lessonId}
@@ -388,7 +430,19 @@ flowchart TB
 **200 OK**
 
 ```json
-{  "id": "33333333-3333-3333-3333-333333333333",  "learnerId": "11111111-1111-1111-1111-111111111111",  "instructorId": "22222222-2222-2222-2222-222222222222",  "type": "Standard",  "start": "2025-08-12T10:00:00+05:30",  "end": "2025-08-12T11:00:00+05:30",  "location": {"lat": -33.86, "lng": 151.21, "label": "Sydney CBD"},  "status": "Scheduled",  "paymentStatus": "Paid",  "createdAt": "2025-08-10T12:00:00Z",  "updatedAt": "2025-08-10T12:05:00Z"}
+{
+  "id": "33333333-3333-3333-3333-333333333333",
+  "learnerId": "11111111-1111-1111-1111-111111111111",
+  "instructorId": "22222222-2222-2222-2222-222222222222",
+  "type": "Standard",
+  "start": "2025-08-12T10:00:00+05:30",
+  "end": "2025-08-12T11:00:00+05:30",
+  "location": { "lat": -33.86, "lng": 151.21, "label": "Sydney CBD" },
+  "status": "Scheduled",
+  "paymentStatus": "Paid",
+  "createdAt": "2025-08-10T12:00:00Z",
+  "updatedAt": "2025-08-10T12:05:00Z"
+}
 ```
 
 ### 6.4 PUT /lessons/{lessonId}
@@ -396,13 +450,24 @@ flowchart TB
 **Body**
 
 ```json
-{  "start": "2025-08-13T14:00:00+05:30",  "end": "2025-08-13T15:00:00+05:30",  "reason": "Reschedule",  "applyFee": true}
+{
+  "start": "2025-08-13T14:00:00+05:30",
+  "end": "2025-08-13T15:00:00+05:30",
+  "reason": "Reschedule",
+  "applyFee": true
+}
 ```
 
 **200 OK**
 
 ```json
-{ "id": "33333333-3333-3333-3333-333333333333", "status":"Scheduled", "oldStart":"2025-08-12T10:00:00+05:30", "newStart":"2025-08-13T14:00:00+05:30", "feeApplied": true }
+{
+  "id": "33333333-3333-3333-3333-333333333333",
+  "status": "Scheduled",
+  "oldStart": "2025-08-12T10:00:00+05:30",
+  "newStart": "2025-08-13T14:00:00+05:30",
+  "feeApplied": true
+}
 ```
 
 **Errors**: `409 SLOT_TAKEN`, `422 CUTOFF_EXCEEDED`, `409 NOT_RESCHEDULABLE`
@@ -418,7 +483,11 @@ flowchart TB
 **200 OK**
 
 ```json
-{ "id":"33333333-3333-3333-3333-333333333333", "status":"Cancelled", "refund": { "amount": 50.00, "currency": "AUD", "method": "wallet" } }
+{
+  "id": "33333333-3333-3333-3333-333333333333",
+  "status": "Cancelled",
+  "refund": { "amount": 50.0, "currency": "AUD", "method": "wallet" }
+}
 ```
 
 ---
@@ -438,21 +507,25 @@ Scheduled -> NoShow (auto after grace)
 ### 7.2 State Management Implementation Requirements
 
 #### **Critical Gap: State Transition Engine**
+
 The lesson CRUD system requires a sophisticated state management engine beyond simple status updates:
 
 **State Transition Validation Logic:**
+
 - **Guard Conditions**: Each transition must validate prerequisites (payment status, time constraints, user permissions)
 - **Business Rules**: Enforce cancellation policies, reschedule windows, and grace periods
 - **Atomic Operations**: State changes must be transactional with audit logging
 - **Rollback Capability**: Failed transitions must revert cleanly with error reporting
 
 **Auto-Progression Rules:**
+
 - **NoShow Detection**: Automatically transition `Scheduled → NoShow` after configurable grace period (default 15 minutes)
 - **Payment Timeout**: Transition `PendingPayment → Cancelled` after payment window expires (default 30 minutes)
 - **Lesson Completion**: Instructor-initiated transition `InProgress → Completed` with optional feedback capture
 - **Scheduled Tasks**: Background jobs for state transitions with retry logic and monitoring
 
 **State-Specific Behaviors:**
+
 - **Draft**: Temporary state for lesson creation workflow, auto-cleanup after 1 hour
 - **PendingPayment**: Hold instructor availability, enable payment retry, timeout handling
 - **Scheduled**: Enable reschedule/cancel actions, send reminder notifications, availability release on cancel
@@ -462,12 +535,24 @@ The lesson CRUD system requires a sophisticated state management engine beyond s
 - **NoShow**: Instructor compensation handling, automatic rescheduling offers
 
 **Implementation Requirements:**
+
 ```typescript
 // State Machine Interface
 interface LessonStateMachine {
-  canTransition(from: LessonStatus, to: LessonStatus, context: TransitionContext): boolean;
-  executeTransition(lessonId: string, newStatus: LessonStatus, context: TransitionContext): Promise<LessonStateResult>;
-  getAvailableTransitions(currentStatus: LessonStatus, userRole: OrgRole): LessonStatus[];
+  canTransition(
+    from: LessonStatus,
+    to: LessonStatus,
+    context: TransitionContext,
+  ): boolean;
+  executeTransition(
+    lessonId: string,
+    newStatus: LessonStatus,
+    context: TransitionContext,
+  ): Promise<LessonStateResult>;
+  getAvailableTransitions(
+    currentStatus: LessonStatus,
+    userRole: OrgRole,
+  ): LessonStatus[];
   scheduleAutoTransitions(lessonId: string): Promise<void>;
 }
 
@@ -481,6 +566,7 @@ interface TransitionContext {
 ```
 
 **Database Requirements:**
+
 - **State History Table**: Track all state changes with timestamps, actors, and reasons
 - **Scheduled Transitions**: Queue for background state changes with retry logic
 - **State Locks**: Prevent concurrent state modifications with optimistic locking
@@ -494,7 +580,7 @@ interface TransitionContext {
 The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 
 - **JWT Authentication Guard** (`JwtAuthGuard`)
-- **Role Authorization Guard** (`RoleGuard`) 
+- **Role Authorization Guard** (`RoleGuard`)
 - **Permission-based decorators** (`@Permissions`, `@ScopedLessonAccess`)
 - **Organization scoping** for multi-tenancy
 - **Audit logging** for all authorization decisions
@@ -502,17 +588,19 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 ### 8.2 Role-Based Permission Matrix
 
 #### **Owner Role**
+
 - **Permissions**: Full access to all lesson operations
 - **Scope**: All lessons within their organization
-- **CRUD Access**: 
+- **CRUD Access**:
   - ✅ Create lessons for any student/instructor
   - ✅ Read all org lessons with full details
   - ✅ Update/reschedule any lesson
   - ✅ Cancel/delete any lesson with full refund control
 
-#### **Admin Role** 
+#### **Admin Role**
+
 - **Permissions**: Nearly full access (cannot delete org)
-- **Scope**: All lessons within their organization  
+- **Scope**: All lessons within their organization
 - **CRUD Access**:
   - ✅ Create lessons for any student/instructor
   - ✅ Read all org lessons with full details
@@ -520,6 +608,7 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
   - ✅ Cancel lessons with refund processing
 
 #### **Instructor Role**
+
 - **Permissions**: `lessons:read`, `lessons:write`, `lessons:create`, `students:read` (scoped)
 - **Scope**: Only lessons they teach + assigned students
 - **CRUD Access**:
@@ -529,6 +618,7 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
   - ❌ Cannot delete lessons (admin function)
 
 #### **Student Role**
+
 - **Permissions**: `lessons:read`, `bookings:create` (scoped to self)
 - **Scope**: Only own lessons + children's lessons (for parents)
 - **CRUD Access**:
@@ -540,15 +630,17 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 ### 8.3 Endpoint-Specific RBAC Implementation
 
 #### **POST /lessons (Create)**
+
 ```typescript
 @Permissions('lessons:create', 'bookings:create')
 // All roles can create, but scoped:
 // - Students: only for self/children
-// - Instructors: only for assigned students  
+// - Instructors: only for assigned students
 // - Admin/Owner: any student in org
 ```
 
 #### **GET /lessons (List)**
+
 ```typescript
 @ScopedLessonAccess() // Uses 'lessons:read' + automatic scoping
 // Returns filtered results based on role:
@@ -558,6 +650,7 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 ```
 
 #### **GET /lessons/:id (Details)**
+
 ```typescript
 @ScopedLessonAccess()
 // Returns lesson if user has scoped access:
@@ -567,6 +660,7 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 ```
 
 #### **PUT /lessons/:id (Update/Reschedule)**
+
 ```typescript
 @AuthorizedEndpoint(['owner', 'admin', 'instructor'], ['lessons:write'], true)
 // Can modify lesson if:
@@ -576,6 +670,7 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 ```
 
 #### **DELETE /lessons/:id (Cancel)**
+
 ```typescript
 @Permissions('lessons:delete')
 // Soft cancel vs hard delete:
@@ -587,29 +682,31 @@ The Lesson CRUD API must integrate with DriveFlow's existing RBAC system using:
 ### 8.4 Data Scoping Implementation
 
 #### **Automatic Scoping via RoleGuard**
+
 The `RoleGuard` automatically adds `scopedResourceIds` to the request:
 
 ```typescript
 // For Instructors:
-request.scopedResourceIds = ['student-1-id', 'student-2-id'] // assignedStudentIds
+request.scopedResourceIds = ["student-1-id", "student-2-id"]; // assignedStudentIds
 
 // For Students/Parents:
-request.scopedResourceIds = ['student-id', 'child-1-id'] // self + children
+request.scopedResourceIds = ["student-id", "child-1-id"]; // self + children
 
 // For Admin/Owner:
 // No additional scoping (org-level access)
 ```
 
 #### **Service Layer Filtering**
+
 ```typescript
 // LessonService applies role-based filters:
 switch (user.role) {
-  case 'instructor':
+  case "instructor":
     return { instructorId: user.id };
-  case 'student':
+  case "student":
     return { studentId: { in: request.scopedResourceIds } };
-  case 'admin':
-  case 'owner':
+  case "admin":
+  case "owner":
     return {}; // No additional filtering beyond orgId
 }
 ```
@@ -617,23 +714,27 @@ switch (user.role) {
 ### 8.5 Multi-Tenancy & Organization Scoping
 
 #### **Mandatory Organization Context**
+
 - All lesson queries MUST include `orgId = user.orgId`
 - Cross-organization access is strictly prohibited
 - Data isolation enforced at database and service levels
 
 #### **Organization Boundary Enforcement**
+
 ```typescript
 // Every lesson operation includes:
 const baseFilter = {
   orgId: user.orgId, // Mandatory org scoping
-  ...roleBasedFilters  // Additional role-based restrictions
+  ...roleBasedFilters, // Additional role-based restrictions
 };
 ```
 
 ### 8.6 Audit & Security Requirements
 
 #### **Authorization Audit Trail**
+
 All RBAC decisions must be logged:
+
 ```typescript
 {
   userId: 'instructor-123',
@@ -648,12 +749,14 @@ All RBAC decisions must be logged:
 ```
 
 #### **Permission Edge Cases**
+
 - **Instructor accessing unassigned student lesson**: 403 Forbidden
-- **Student accessing another student's lesson**: 403 Forbidden  
+- **Student accessing another student's lesson**: 403 Forbidden
 - **Cross-org access attempts**: 404 Not Found (don't reveal existence)
 - **Permission escalation attempts**: Logged + 403 Forbidden
 
 #### **Security Validations**
+
 - Validate `instructorId` in create requests matches assigned students
 - Verify lesson ownership before updates/cancellations
 - Check policy constraints before allowing modifications
@@ -662,6 +765,7 @@ All RBAC decisions must be logged:
 ### 8.7 RBAC Testing Requirements
 
 #### **Role-Based Test Scenarios**
+
 - ✅ Each role can only access scoped resources
 - ✅ Cross-role access attempts are properly blocked
 - ✅ Organization boundaries are enforced
@@ -669,12 +773,14 @@ All RBAC decisions must be logged:
 - ✅ Audit logs capture all authorization decisions
 
 #### **Scoped Access Validation**
+
 - ✅ Instructors see only assigned student lessons
 - ✅ Students see only own/children lessons
 - ✅ Admin/Owner see all org lessons
 - ✅ Scoping works for both list and detail endpoints
 
 #### **Edge Case Testing**
+
 - ✅ Instructor assignment changes reflect immediately in access
 - ✅ Student role changes (e.g., becoming parent) update scoping
 - ✅ Cross-org lesson access attempts fail gracefully
@@ -695,6 +801,7 @@ All RBAC decisions must be logged:
 ## 10. QA Scenarios (selected)
 
 ### **Core Functionality**
+
 - Cannot book overlapping instructor slots (but different instructors can overlap).
 - Reschedule within cutoff prompts fee; blocks if unpaid.
 - Cancelling unpaid `PendingPayment` releases hold without refund.
@@ -703,6 +810,7 @@ All RBAC decisions must be logged:
 - Notification fanout verified to all parties.
 
 ### **RBAC & Security Scenarios**
+
 - **Instructor Scoping**: Instructor can only see lessons for assigned students; attempting to access unassigned lesson returns 403.
 - **Student Scoping**: Student can only see own lessons (+ children for parents); attempting to access other student's lesson returns 403.
 - **Cross-Org Isolation**: User from Org A attempting to access lesson from Org B returns 404 (not 403, to avoid revealing existence).
@@ -716,6 +824,7 @@ All RBAC decisions must be logged:
 ## 11. Appendix — Sample Errors
 
 ### **Business Logic Errors**
+
 ```json
 { "error": "SLOT_TAKEN", "message": "The selected time is no longer available." }
 { "error": "CUTOFF_EXCEEDED", "message": "Rescheduling not permitted within 2 hours of start." }
@@ -723,6 +832,7 @@ All RBAC decisions must be logged:
 ```
 
 ### **RBAC & Security Errors**
+
 ```json
 { "error": "INSUFFICIENT_PERMISSIONS", "message": "Missing required permissions: lessons:write" }
 { "error": "ACCESS_DENIED", "message": "Instructor not assigned to this student" }
@@ -733,6 +843,7 @@ All RBAC decisions must be logged:
 ```
 
 ### **Authentication Errors**
+
 ```json
 { "error": "UNAUTHORIZED", "message": "Access token is required" }
 { "error": "TOKEN_EXPIRED", "message": "Access token has expired" }
@@ -751,83 +862,83 @@ This section links functional requirements to the personas they serve. Use it du
 
 ### 12.1 Capability ↔︎ Persona Matrix (High‑level)
 
-| Capability | ID | Learner | Parent | Instructor | Admin | Priority | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Create / Book lesson | C-01 | ✓ | ✓ | ✓ | ✓ | Must | Parent books for learner; admin can book on behalf; instructor can create blocks/lessons |
-| Read / Retrieve lessons | C-02 | ✓ | ✓ | ✓ | ✓ | Must | Filters by date/status; scope-limited by role |
-| Update / Reschedule | C-03 | ✓ | ✓ | ✓ | ✓ | Must | Policy cutoff + potential fee |
-| Cancel lesson | C-04 | ✓ | ✓ | ✓ | ✓ | Must | Refund/fee matrix varies by actor |
-| Notifications | C-05 | ✓ | ✓ | ✓ | ✓ | Must | Email/SMS on create/update/cancel |
-| Payments & Refunds | C-06 | ✓ | ✓ |  | ✓ | Must | Card/wallet support; admin overrides |
-| Audit & Events | C-07 |  |  |  | ✓ | Must | Full audit, outbox events |
+| Capability              | ID   | Learner | Parent | Instructor | Admin | Priority | Notes                                                                                    |
+| ----------------------- | ---- | ------- | ------ | ---------- | ----- | -------- | ---------------------------------------------------------------------------------------- |
+| Create / Book lesson    | C-01 | ✓       | ✓      | ✓          | ✓     | Must     | Parent books for learner; admin can book on behalf; instructor can create blocks/lessons |
+| Read / Retrieve lessons | C-02 | ✓       | ✓      | ✓          | ✓     | Must     | Filters by date/status; scope-limited by role                                            |
+| Update / Reschedule     | C-03 | ✓       | ✓      | ✓          | ✓     | Must     | Policy cutoff + potential fee                                                            |
+| Cancel lesson           | C-04 | ✓       | ✓      | ✓          | ✓     | Must     | Refund/fee matrix varies by actor                                                        |
+| Notifications           | C-05 | ✓       | ✓      | ✓          | ✓     | Must     | Email/SMS on create/update/cancel                                                        |
+| Payments & Refunds      | C-06 | ✓       | ✓      |            | ✓     | Must     | Card/wallet support; admin overrides                                                     |
+| Audit & Events          | C-07 |         |        |            | ✓     | Must     | Full audit, outbox events                                                                |
 
 ### 12.2 Functional Requirements Mapped to Personas
 
 ### Create / Book
 
-| Req ID | Requirement | Primary Persona(s) | Impacted Persona(s) | Acceptance Hints |
-| --- | --- | --- | --- | --- |
-| F-01 | Select instructor, time, type, location | Learner, Parent | Instructor, Admin | UI allows constrained choices; form validation |
-| F-02 | Validate instructor availability & constraints | Learner, Parent | Instructor | Reject if overlap, travel buffer or outside hours |
-| F-03 | Create lesson in `PendingPayment` or `Scheduled` | Learner, Parent | Instructor, Admin | Idempotent create; state set correctly |
-| F-04 | Payment intent + confirmation (3DS etc.) | Learner, Parent | Admin | Handles wallet + card top-ups |
-| F-05 | Send notifications after booking | Learner, Parent | Instructor, Admin | All parties receive message with iCal link |
+| Req ID | Requirement                                      | Primary Persona(s) | Impacted Persona(s) | Acceptance Hints                                  |
+| ------ | ------------------------------------------------ | ------------------ | ------------------- | ------------------------------------------------- |
+| F-01   | Select instructor, time, type, location          | Learner, Parent    | Instructor, Admin   | UI allows constrained choices; form validation    |
+| F-02   | Validate instructor availability & constraints   | Learner, Parent    | Instructor          | Reject if overlap, travel buffer or outside hours |
+| F-03   | Create lesson in `PendingPayment` or `Scheduled` | Learner, Parent    | Instructor, Admin   | Idempotent create; state set correctly            |
+| F-04   | Payment intent + confirmation (3DS etc.)         | Learner, Parent    | Admin               | Handles wallet + card top-ups                     |
+| F-05   | Send notifications after booking                 | Learner, Parent    | Instructor, Admin   | All parties receive message with iCal link        |
 
 ### Read / Retrieve
 
-| Req ID | Requirement | Primary Persona(s) | Impacted Persona(s) | Acceptance Hints |
-| --- | --- | --- | --- | --- |
-| F-06 | List lessons with filters & pagination | Learner, Parent, Instructor | Admin | Role-limited scope; performant queries |
-| F-07 | View lesson details | Learner, Parent, Instructor | Admin | Includes payment & status metadata |
+| Req ID | Requirement                            | Primary Persona(s)          | Impacted Persona(s) | Acceptance Hints                       |
+| ------ | -------------------------------------- | --------------------------- | ------------------- | -------------------------------------- |
+| F-06   | List lessons with filters & pagination | Learner, Parent, Instructor | Admin               | Role-limited scope; performant queries |
+| F-07   | View lesson details                    | Learner, Parent, Instructor | Admin               | Includes payment & status metadata     |
 
 ### Update / Reschedule
 
-| Req ID | Requirement | Primary Persona(s) | Impacted Persona(s) | Acceptance Hints |
-| --- | --- | --- | --- | --- |
-| F-08 | Policy cutoff & reschedule fee evaluation | Learner, Parent, Instructor | Admin | Enforce configurable windows/fees |
-| F-09 | Re-check availability at new time | Learner, Parent, Instructor | Admin | Prevent overlaps post-change |
-| F-10 | Persist change, emit event, notify | Learner, Parent, Instructor | Admin | Clear diff in audit; all parties updated |
+| Req ID | Requirement                               | Primary Persona(s)          | Impacted Persona(s) | Acceptance Hints                         |
+| ------ | ----------------------------------------- | --------------------------- | ------------------- | ---------------------------------------- |
+| F-08   | Policy cutoff & reschedule fee evaluation | Learner, Parent, Instructor | Admin               | Enforce configurable windows/fees        |
+| F-09   | Re-check availability at new time         | Learner, Parent, Instructor | Admin               | Prevent overlaps post-change             |
+| F-10   | Persist change, emit event, notify        | Learner, Parent, Instructor | Admin               | Clear diff in audit; all parties updated |
 
 ### Cancel
 
-| Req ID | Requirement | Primary Persona(s) | Impacted Persona(s) | Acceptance Hints |
-| --- | --- | --- | --- | --- |
-| F-11 | Compute refund/fee by actor & cutoff | Learner, Parent, Instructor | Admin | Apply matrix; show user-facing breakdown |
-| F-12 | Execute refund/charge via Payment Service | Learner, Parent | Admin | Pro‑rata wallet/card restoration |
-| F-13 | Update `Cancelled`, capture who/why, notify | All | All | Reason required; audit trail; event outbox |
+| Req ID | Requirement                                 | Primary Persona(s)          | Impacted Persona(s) | Acceptance Hints                           |
+| ------ | ------------------------------------------- | --------------------------- | ------------------- | ------------------------------------------ |
+| F-11   | Compute refund/fee by actor & cutoff        | Learner, Parent, Instructor | Admin               | Apply matrix; show user-facing breakdown   |
+| F-12   | Execute refund/charge via Payment Service   | Learner, Parent             | Admin               | Pro‑rata wallet/card restoration           |
+| F-13   | Update `Cancelled`, capture who/why, notify | All                         | All                 | Reason required; audit trail; event outbox |
 
 ### Cross-cutting
 
-| Req ID | Requirement | Primary Persona(s) | Impacted Persona(s) | Acceptance Hints |
-| --- | --- | --- | --- | --- |
-| F-14 | Auto mark `NoShow` after grace | Instructor | Learner, Parent, Admin | Scheduled job; policy-driven |
-| F-15 | Admin override on policy/refund | Admin | Learner, Parent, Instructor | Mandatory reason; audit + approval rules |
+| Req ID | Requirement                     | Primary Persona(s) | Impacted Persona(s)         | Acceptance Hints                         |
+| ------ | ------------------------------- | ------------------ | --------------------------- | ---------------------------------------- |
+| F-14   | Auto mark `NoShow` after grace  | Instructor         | Learner, Parent, Admin      | Scheduled job; policy-driven             |
+| F-15   | Admin override on policy/refund | Admin              | Learner, Parent, Instructor | Mandatory reason; audit + approval rules |
 
 ### 12.3 Non‑Functional Requirements (NFRs) tagged by Persona Risk
 
-| NFR ID | Requirement | Persona Risk if unmet | Target |
-| --- | --- | --- | --- |
-| NF-01 | Role-based AuthZ & data scoping | Privacy breach (all) | Learner/Parent see own; Instructor sees own; Admin all |
-| NF-02 | Idempotency for create/payments | Double bookings/charges (Learner/Parent) | Idempotency-Key + dedupe on server |
-| NF-03 | Timezone correctness (AU + India) | Wrong times (all) | Store UTC; render per user; DST-safe |
-| NF-04 | Performance SLAs | Slow UX (all) | Read <300ms p95; write <500ms p95 |
-| NF-05 | Full audit logging | Disputes unresolvable (Admin) | Who/when/what diff JSON |
-| NF-06 | Reliable event outbox | Missed notifications (all) | Exactly-once delivery semantics |
-| NF-07 | PII minimisation | Compliance overhead (all) | Only necessary fields; masked logs |
+| NFR ID | Requirement                       | Persona Risk if unmet                    | Target                                                 |
+| ------ | --------------------------------- | ---------------------------------------- | ------------------------------------------------------ |
+| NF-01  | Role-based AuthZ & data scoping   | Privacy breach (all)                     | Learner/Parent see own; Instructor sees own; Admin all |
+| NF-02  | Idempotency for create/payments   | Double bookings/charges (Learner/Parent) | Idempotency-Key + dedupe on server                     |
+| NF-03  | Timezone correctness (AU + India) | Wrong times (all)                        | Store UTC; render per user; DST-safe                   |
+| NF-04  | Performance SLAs                  | Slow UX (all)                            | Read <300ms p95; write <500ms p95                      |
+| NF-05  | Full audit logging                | Disputes unresolvable (Admin)            | Who/when/what diff JSON                                |
+| NF-06  | Reliable event outbox             | Missed notifications (all)               | Exactly-once delivery semantics                        |
+| NF-07  | PII minimisation                  | Compliance overhead (all)                | Only necessary fields; masked logs                     |
 
 ### 12.4 UAT Scenarios by Persona (Shortlist)
 
 - **Learner/Parent**
-    - Book with wallet-only payment → success notification includes calendar invite.
-    - Reschedule inside cutoff → fee prompted; on payment success, change applied.
-    - Cancel ≥24h → full refund to original method; audit shows actor "Parent".
+  - Book with wallet-only payment → success notification includes calendar invite.
+  - Reschedule inside cutoff → fee prompted; on payment success, change applied.
+  - Cancel ≥24h → full refund to original method; audit shows actor "Parent".
 - **Instructor**
-    - Attempt overlap booking via admin-created block → system prevents.
-    - Reschedule initiated by instructor → no fee; learner notified.
-    - NoShow auto-applied after grace; payout rules unaffected until admin review.
+  - Attempt overlap booking via admin-created block → system prevents.
+  - Reschedule initiated by instructor → no fee; learner notified.
+  - NoShow auto-applied after grace; payout rules unaffected until admin review.
 - **Admin**
-    - Override late cancellation to full refund → reason mandatory; audit entry created.
-    - Search lessons for a learner across instructors with filters → performance ok.
-    - Payment failure followed by cancel → no refund attempted; state clear in UI.
+  - Override late cancellation to full refund → reason mandatory; audit entry created.
+  - Search lessons for a learner across instructors with filters → performance ok.
+  - Payment failure followed by cancel → no refund attempted; state clear in UI.
 
 > Tip: Prefix backlog items with these IDs (e.g., F-09, NF-03) so PRs and test cases trace cleanly back to persona value.

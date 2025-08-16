@@ -3,6 +3,7 @@
 ## Relevant Files
 
 ### New Files to Create
+
 - `apps/api/src/modules/auth/auth.module.ts` - NestJS authentication module ✅
 - `apps/api/src/modules/auth/auth.controller.ts` - Auth endpoints (login, refresh, logout) ✅
 - `apps/api/src/modules/auth/auth.service.ts` - Authentication business logic ✅
@@ -21,6 +22,7 @@
 - `packages/contracts/src/auth/permission.schemas.ts` - Permission and role schemas ✅
 
 ### Existing Files to Modify
+
 - `apps/api/prisma/schema.prisma` - Add password field to User model and RefreshToken model
 - `apps/api/src/app.module.ts` - Import AuthModule
 - `apps/api/src/main.ts` - Add JWT authentication setup
@@ -28,6 +30,7 @@
 - `apps/api/package.json` - Add JWT and crypto dependencies
 
 ### Test Files
+
 - `apps/api/src/modules/auth/auth.service.spec.ts` - Auth service unit tests
 - `apps/api/src/modules/auth/auth.controller.spec.ts` - Auth controller integration tests
 - `apps/api/src/modules/auth/guards/jwt-auth.guard.spec.ts` - JWT guard tests
@@ -37,6 +40,7 @@
 - `apps/api/src/modules/auth/utils/permissions.util.spec.ts` - Permission utility tests
 
 ### Notes
+
 - Follow DriveFlow architecture patterns and multi-tenancy requirements
 - Use `@driveflow/contracts` for all type definitions and validation
 - Implement proper RBAC with organization-scoped permissions

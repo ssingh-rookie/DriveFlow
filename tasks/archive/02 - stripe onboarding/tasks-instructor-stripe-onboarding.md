@@ -3,6 +3,7 @@
 ## Relevant Files
 
 ### New Files Created
+
 - `apps/api/src/modules/payments/payments.module.ts` - NestJS module for payments
 - `apps/api/src/modules/payments/payments.controller.ts` - HTTP endpoints for payments
 - `apps/api/src/modules/payments/payments.service.ts` - Business logic for payments
@@ -14,16 +15,19 @@
 - `apps/web/src/components/instructors/StripeOnboarding.tsx` - Stripe onboarding UI component
 
 ### Existing Files Modified
+
 - `apps/api/prisma/schema.prisma` - Add new fields to the `instructors` table
 - `apps/api/src/app.module.ts` - Import the new `PaymentsModule`
 - `packages/contracts/src/index.ts` - Export the new payment-related schemas
 
 ### Test Files
+
 - `apps/api/src/modules/payments/payments.service.spec.ts` - Payments service unit tests
 - `apps/api/src/modules/payments/payments.controller.spec.ts` - Payments controller integration tests
 - `apps/web/src/components/instructors/StripeOnboarding.test.tsx` - UI component tests
 
 ### Notes
+
 - Follow DriveFlow architecture patterns and multi-tenancy requirements
 - Use `@driveflow/contracts` for all type definitions
 - Implement proper RBAC with role guards

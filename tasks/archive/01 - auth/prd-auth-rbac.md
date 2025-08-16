@@ -43,19 +43,19 @@ We will implement **JWT-based authentication** for stateless API access and **ro
 
 ## 4. User Roles & Permissions Matrix
 
-| Action / Resource | Instructor | Parent | Learner | Admin |
-| --- | --- | --- | --- | --- |
-| **Authentication** | ✅ | ✅ | ✅ | ✅ |
-| **View own profile** | ✅ | ✅ | ✅ | ✅ |
-| **Edit own profile** | ✅ | ✅ | ✅ | ✅ |
-| **View learner profiles** | ✅ (assigned only) | ✅ (their child only) | ❌ | ✅ |
-| **View lesson history** | ✅ (assigned learners) | ✅ (child) | ✅ (self) | ✅ |
-| **Create/Update lessons** | ✅ (assigned only) | ❌ | ❌ | ✅ |
-| **Book lessons** | ❌ | ✅ (for child) | ✅ (self) | ✅ |
-| **Cancel lessons** | ✅ (assigned) | ✅ (child) | ✅ (self) | ✅ |
-| **View payments** | ✅ (related to their lessons) | ✅ (child's payments) | ❌ | ✅ |
-| **Manage payments/refunds** | ❌ | ✅ | ❌ | ✅ |
-| **Manage platform settings/users** | ❌ | ❌ | ❌ | ✅ |
+| Action / Resource                  | Instructor                    | Parent                | Learner   | Admin |
+| ---------------------------------- | ----------------------------- | --------------------- | --------- | ----- |
+| **Authentication**                 | ✅                            | ✅                    | ✅        | ✅    |
+| **View own profile**               | ✅                            | ✅                    | ✅        | ✅    |
+| **Edit own profile**               | ✅                            | ✅                    | ✅        | ✅    |
+| **View learner profiles**          | ✅ (assigned only)            | ✅ (their child only) | ❌        | ✅    |
+| **View lesson history**            | ✅ (assigned learners)        | ✅ (child)            | ✅ (self) | ✅    |
+| **Create/Update lessons**          | ✅ (assigned only)            | ❌                    | ❌        | ✅    |
+| **Book lessons**                   | ❌                            | ✅ (for child)        | ✅ (self) | ✅    |
+| **Cancel lessons**                 | ✅ (assigned)                 | ✅ (child)            | ✅ (self) | ✅    |
+| **View payments**                  | ✅ (related to their lessons) | ✅ (child's payments) | ❌        | ✅    |
+| **Manage payments/refunds**        | ❌                            | ✅                    | ❌        | ✅    |
+| **Manage platform settings/users** | ❌                            | ❌                    | ❌        | ✅    |
 
 ---
 
@@ -64,24 +64,24 @@ We will implement **JWT-based authentication** for stateless API access and **ro
 ### 5.1 Authentication
 
 - **POST /auth/login**
-    - Input: `{ email, password }`
-    - Output: `{ accessToken, refreshToken, userRole }`
-    - Validates credentials, issues **short-lived access token (e.g., 15 min)** and **long-lived refresh token (e.g., 7 days)**.
+  - Input: `{ email, password }`
+  - Output: `{ accessToken, refreshToken, userRole }`
+  - Validates credentials, issues **short-lived access token (e.g., 15 min)** and **long-lived refresh token (e.g., 7 days)**.
 - **POST /auth/refresh**
-    - Input: `{ refreshToken }`
-    - Output: `{ accessToken }`
-    - Rotates refresh tokens to prevent replay attacks.
+  - Input: `{ refreshToken }`
+  - Output: `{ accessToken }`
+  - Rotates refresh tokens to prevent replay attacks.
 - **POST /auth/logout**
-    - Invalidates refresh token in DB (blacklist/expiry).
+  - Invalidates refresh token in DB (blacklist/expiry).
 
 ### 5.2 JWT Token Structure
 
 - **Header**: `{ alg: "HS256", typ: "JWT" }`
 - **Payload Claims**:
-    - `sub`: User ID
-    - `role`: "instructor" | "parent" | "learner" | "admin"
-    - `iat`, `exp`: issued at / expiry
-    - (Optional) `permissions`: explicit permission list
+  - `sub`: User ID
+  - `role`: "instructor" | "parent" | "learner" | "admin"
+  - `iat`, `exp`: issued at / expiry
+  - (Optional) `permissions`: explicit permission list
 - **Signature**: HMAC SHA-256 with secret.
 
 ### 5.3 Role-Based Authorisation Middleware
@@ -93,10 +93,10 @@ We will implement **JWT-based authentication** for stateless API access and **ro
 
 ```javascript
 const can = (requiredRole) => (req, res, next) => {
-    if (req.user.role !== requiredRole) {
-        return res.status(403).json({ message: "Forbidden" });
-    }
-    next();
+  if (req.user.role !== requiredRole) {
+    return res.status(403).json({ message: "Forbidden" });
+  }
+  next();
 };
 ```
 
@@ -114,15 +114,15 @@ const can = (requiredRole) => (req, res, next) => {
 ## 6. Non-Functional Requirements
 
 - **Security**
-    - Store hashed passwords (bcrypt, min cost factor 10).
-    - Use HTTPS for all API traffic.
-    - Rotate JWT secret keys periodically.
+  - Store hashed passwords (bcrypt, min cost factor 10).
+  - Use HTTPS for all API traffic.
+  - Rotate JWT secret keys periodically.
 - **Performance**
-    - Token verification in < 50ms.
+  - Token verification in < 50ms.
 - **Scalability**
-    - Stateless auth → can scale horizontally.
+  - Stateless auth → can scale horizontally.
 - **Audit Logs**
-    - Log failed logins, password resets, permission denials.
+  - Log failed logins, password resets, permission denials.
 
 ---
 
@@ -139,24 +139,24 @@ const can = (requiredRole) => (req, res, next) => {
 
 **users table**
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| id | UUID | Primary key |
-| email | String | Unique |
-| password | String | Hashed |
-| role | Enum | instructor, parent, learner, admin |
-| created_at | DateTime |  |
-| updated_at | DateTime |  |
+| Field      | Type     | Notes                              |
+| ---------- | -------- | ---------------------------------- |
+| id         | UUID     | Primary key                        |
+| email      | String   | Unique                             |
+| password   | String   | Hashed                             |
+| role       | Enum     | instructor, parent, learner, admin |
+| created_at | DateTime |                                    |
+| updated_at | DateTime |                                    |
 
 **refresh_tokens table**
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| id | UUID | Primary key |
-| user_id | UUID | FK to users |
-| token | String | Stored hashed |
-| expires_at | DateTime |  |
-| created_at | DateTime |  |
+| Field      | Type     | Notes         |
+| ---------- | -------- | ------------- |
+| id         | UUID     | Primary key   |
+| user_id    | UUID     | FK to users   |
+| token      | String   | Stored hashed |
+| expires_at | DateTime |               |
+| created_at | DateTime |               |
 
 ---
 
@@ -284,19 +284,22 @@ sequenceDiagram
 ## 13. DriveFlow Integration Considerations
 
 ### 13.1 Multi-Tenancy
+
 - All authentication must respect organization (`orgId`) boundaries
 - Users belong to specific organizations through `UserOrg` relationships
 - Role permissions are scoped within the organization context
 
 ### 13.2 Existing Schema Integration
+
 - Leverage existing `User`, `UserOrg`, and `OrgRole` models from Prisma schema
 - Map PRD roles to existing enum values:
   - `admin` → `admin` or `owner` OrgRole
-  - `instructor` → `instructor` OrgRole  
+  - `instructor` → `instructor` OrgRole
   - `parent` → Custom guardian relationship via `StudentGuardian`
   - `learner` → `student` OrgRole
 
 ### 13.3 API Integration
+
 - Integrate with existing NestJS architecture in `apps/api/src/`
 - Use existing Prisma repositories and service patterns
 - Leverage `@driveflow/contracts` for type definitions
