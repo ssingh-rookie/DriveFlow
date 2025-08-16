@@ -143,13 +143,20 @@ export class LessonsService {
         status: statusMap[request.status] || request.status,
         statusChangedAt: new Date(),
       },
+      include: {
+        service: true,
+        instructor: true,
+        student: true,
+      },
     });
 
     return {
       id: booking.id,
       studentId: booking.studentId,
       instructorId: booking.instructorId,
+      instructorName: booking.instructor?.displayName || "Unknown Instructor",
       serviceId: booking.serviceId,
+      serviceName: booking.service?.name || "Unknown Service",
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       pickupAddress: booking.pickupAddress || "",
